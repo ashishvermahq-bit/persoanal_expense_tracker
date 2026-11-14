@@ -2,28 +2,45 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project state
-
-This is a personal expense tracker that is currently an untouched `create-next-app` scaffold: [app/page.tsx](app/page.tsx) and the metadata in [app/layout.tsx](app/layout.tsx) are still the template defaults. There is no data layer, API routes, or test setup yet — new features establish those conventions rather than follow existing ones.
-
 ## Commands
 
-No lockfile is committed; the README uses npm.
+```bash
+npm run dev       # Start development server (Turbopack, http://localhost:3000)
+npm run build     # Production build
+npm run start     # Start production server
+npm run lint      # Run ESLint (not next lint — that was removed in Next.js 16)
+```
 
-- `npm run dev` — dev server at http://localhost:3000
-- `npm run build` — production build (also the type check; there is no separate `typecheck` script — use `npx tsc --noEmit` for types only)
-- `npm run start` — serve the production build
-- `npm run lint` — ESLint (flat config, `eslint-config-next` core-web-vitals + typescript); lint one file with `npx eslint app/page.tsx`
+## This is Next.js 16 — read the bundled docs before writing code
 
-There is no test runner configured.
+APIs, conventions, and defaults differ significantly from Next.js 13–15. Before writing or modifying any Next.js code, read the relevant guide in `node_modules/next/dist/docs/`. Key breaking changes from Next.js 15→16:
 
-## Stack and non-default configuration
+**Async Request APIs (required)** — `params`, `searchParams`, `cookies()`, `headers()`, and `draftMode()` are all async. Always `await` them:
+```tsx
+export default async function Page(props: PageProps<'/[slug]'>) {
+  const { slug } = await props.params
+}
+```
+Run `npx next typegen` to generate globally available `PageProps<>`, `LayoutProps<>`, and `RouteContext<>` helpers (already used in `app/layout.tsx`).
 
-- Next.js 16.4 (App Router, Turbopack), React 19.3, TypeScript strict, Tailwind CSS 4.3.
-- These versions are recent — verify Next.js APIs against the installed package (`node_modules/next`) or current docs rather than assuming older behaviour.
-- [next.config.ts](next.config.ts) enables options that change how pages must be written:
-  - `cacheComponents: true` — routes are prerendered by default; uncached data access or request-time APIs (`cookies()`, `headers()`, `searchParams`, etc.) must be inside a `<Suspense>` boundary or be explicitly cached with the `"use cache"` directive, otherwise the build errors.
-  - `partialPrefetching: true` and `experimental.agentFeedback: true` are also on.
-- Tailwind is wired through a Turbopack loader rule (`@tailwindcss/turbopack` on `*.css`) in `next.config.ts`, not through PostCSS — there is no `postcss.config.*` or `tailwind.config.*`. Theme tokens are defined in CSS via `@theme inline` in [app/globals.css](app/globals.css) (`background`, `foreground`, Geist font variables), with dark mode driven by `prefers-color-scheme`.
-- Path alias `@/*` maps to the repository root (not `src/`).
-- Layout props use the globally generated `LayoutProps<"/">` / `PageProps<...>` route types (produced by `next dev` / `next build` / `npx next typegen`), so no import is needed for them.
+**Turbopack is the default** — `next dev` and `next build` both use Turbopack. No `--turbopack` flag needed. Use `--webpack` to opt out. Sass tilde imports (`~bootstrap/...`) are not supported; remove the `~` prefix.
+
+**`cacheComponents: true`** — This project has PPR (Partial Prerendering / Cache Components) enabled. Data fetches outside `<Suspense>` will cause build errors. Wrap dynamic data in Suspense.
+
+**`next lint` is removed** — Use `npm run lint` (runs `eslint` directly). `next build` no longer lints.
+
+**`middleware.ts` → `proxy.ts`** — The middleware file convention is renamed. The `edge` runtime is not supported in proxy; use `nodejs` runtime or keep using `middleware.ts` for edge.
+
+**Parallel routes require `default.js`** — Every `@slot` directory needs an explicit `default.tsx` or the build fails.
+
+**`revalidateTag` requires a second argument** — `revalidateTag('key', 'max')` not `revalidateTag('key')`. Use `updateTag` for immediate read-your-writes semantics in Server Actions.
+
+**`serverRuntimeConfig` / `publicRuntimeConfig` removed** — Use environment variables: `process.env.SECRET` for server, `NEXT_PUBLIC_VAR` for client.
+
+## Architecture
+
+- **App Router** (`app/`) — all routes use the App Router. No Pages Router.
+- **Server Components by default** — layouts and pages are Server Components unless marked `'use client'`.
+- **Tailwind CSS 4** — configured via `@tailwindcss/turbopack` loader in `next.config.ts`, not via `tailwind.config.js`.
+- **Path alias** — `@/*` maps to the repo root (e.g. `@/app/...`, `@/components/...`).
+- **TypeScript strict mode** — `strict: true` in `tsconfig.json`.
