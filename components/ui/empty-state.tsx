@@ -18,7 +18,8 @@ export function EmptyState({ icon: Icon, art, title, description, action }: { ic
           <Icon className="size-6" aria-hidden />
         </div>
       ) : null}
-      <h3 className="text-base font-semibold text-ink">{title}</h3>
+      {/* h2: empty states sit directly under the page h1 (no skipped heading level). */}
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
       {description && <p className="mt-1 max-w-sm text-sm text-ink-3">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
