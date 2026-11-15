@@ -3,7 +3,7 @@
 import { Form } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Gauge, Plus, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionLabel } from "@/components/ui/page-header";
 import { toast } from "sonner";
@@ -111,7 +111,7 @@ export function BudgetManager({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <SectionLabel>Monthly limits</SectionLabel>
+        <SectionLabel icon={Gauge} hue={7}>Monthly limits</SectionLabel>
         <Button size="sm" onClick={openNew} disabled={unbudgetedCategories.length === 0} data-testid="new-budget">
           <Plus className="size-3.5" aria-hidden />
           Add budget

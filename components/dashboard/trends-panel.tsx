@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, TrendingUp } from "lucide-react";
+import { HueIcon } from "@/components/ui/hue-icon";
 import { Segmented } from "@/components/ui/segmented";
 import { cn } from "@/lib/cn";
 import { formatPaise } from "@/lib/money";
@@ -37,9 +38,12 @@ export function TrendsPanel({ periods }: { periods: TrendPeriodDTO[] }) {
           data-testid="trends-toggle"
           className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
         >
-          <span>
-            <span className="block text-sm font-semibold uppercase tracking-[0.05em] text-ink-3">Trends</span>
-            <span className="block text-xs text-ink-3">Spend over time, by category and by payment mode</span>
+          <span className="flex items-center gap-3">
+            <HueIcon icon={TrendingUp} hue={3} size="sm" />
+            <span>
+              <span className="block text-sm font-semibold uppercase tracking-[0.05em] text-ink-2">Trends</span>
+              <span className="block text-xs text-ink-3">Spend over time, by category and by payment mode</span>
+            </span>
           </span>
           <ChevronDown className={cn("size-5 shrink-0 text-ink-3 transition-transform duration-200", open && "rotate-180")} aria-hidden />
         </button>

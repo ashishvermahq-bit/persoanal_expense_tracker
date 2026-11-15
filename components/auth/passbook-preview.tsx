@@ -18,9 +18,9 @@ const OPENING = 85_000_00;
 // Light/dark tones go through the `cat` utility. Light aqua is 2.74:1 on the card,
 // so it's darkened by the smallest step that clears 3:1 (6% → 3.07:1); the others pass as-is.
 const ROWS = [
-  { date: "02/11", particulars: "UPI · Kirana Store", debit: 1_240_00, light: "color-mix(in srgb, var(--series-3) 94%, black)", dark: "var(--series-3)" },
-  { date: "05/11", particulars: "Rent · November", debit: 18_000_00, light: "var(--series-7)", dark: "var(--series-7)" },
-  { date: "06/11", particulars: "Swiggy", debit: 486_00, light: "var(--series-2)", dark: "var(--series-2)" },
+  { date: "02/11", particulars: "UPI · Kirana Store", short: "Kirana", debit: 1_240_00, light: "color-mix(in srgb, var(--series-3) 94%, black)", dark: "var(--series-3)" },
+  { date: "05/11", particulars: "Rent · November", short: "Rent", debit: 18_000_00, light: "var(--series-7)", dark: "var(--series-7)" },
+  { date: "06/11", particulars: "Swiggy", short: "Swiggy", debit: 486_00, light: "var(--series-2)", dark: "var(--series-2)" },
 ];
 const tone = (r: (typeof ROWS)[number]) => ({ "--cat-l": r.light, "--cat-d": r.dark }) as React.CSSProperties;
 const DEBITS = ROWS.reduce((s, r) => s + r.debit, 0);
@@ -131,6 +131,26 @@ export function PassbookPreview({ className }: { className?: string }) {
           Hisaab complete
         </span>
       </div>
+    </figure>
+  );
+}
+
+/** Phones: a one-line passbook strip under the form, labelled as an example. */
+export function PassbookStrip({ className }: { className?: string }) {
+  return (
+    <figure
+      role="img"
+      aria-label="Example only, not your data: UPI to Kirana Store ₹1,240, rent ₹18,000 and Swiggy ₹486."
+      className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs text-ink-2 ${className ?? ""}`}
+    >
+      <span className="rounded-full bg-raised px-2 py-0.5 text-micro font-medium text-ink-3">Example</span>
+      {ROWS.map((r, i) => (
+        <span key={r.particulars} className="cat flex animate-list-in items-center gap-1.5" style={{ "--i": i + 4, ...tone(r) } as React.CSSProperties}>
+          <span aria-hidden className="size-2 rounded-full bg-[var(--cat)]" />
+          {r.short}
+          <span className="tabular-nums text-ink">{rupees.format(r.debit / 100)}</span>
+        </span>
+      ))}
     </figure>
   );
 }

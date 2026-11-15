@@ -46,7 +46,10 @@ test.describe("auth screens", () => {
     const page = await ctx.newPage();
     await page.goto("/signup");
     await expect(page.getByTestId("signup-form")).toBeVisible();
-    await expect(page.getByRole("img", { name: /^Example only/ })).toBeHidden();
+    // The brand panel (with its full passbook) is desktop-only…
+    await expect(page.getByRole("img", { name: /passbook-style page/ })).toBeHidden();
+    // …phones get the one-line example strip below the form instead.
+    await expect(page.getByRole("img", { name: /^Example only, not your data: UPI to Kirana Store/ })).toBeVisible();
     await expect(page.getByTestId("signup-form").getByLabel("Full name")).not.toBeFocused();
     const box = await page.getByRole("button", { name: "Create account" }).boundingBox();
     expect(box!.y + box!.height).toBeLessThanOrEqual(844);

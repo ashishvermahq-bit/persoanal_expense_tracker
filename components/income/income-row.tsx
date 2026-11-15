@@ -2,15 +2,31 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Briefcase, Gift, Home, Laptop, Percent, Store, Trash2, TrendingUp, Undo2, Wallet, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { HueIcon } from "@/components/ui/hue-icon";
+import type { Hue } from "@/lib/color";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { api } from "@/lib/client";
 import { formatDateLong } from "@/lib/dates";
 import { INCOME_SOURCE_LABELS } from "@/lib/labels";
 import { formatPaise } from "@/lib/money";
 import type { IncomeDTO } from "@/types/dto";
+import type { IncomeSource } from "@/types/models";
+
+/** Each income source keeps one icon + hue everywhere (colour follows the entity). */
+const SOURCE_LOOK: Record<IncomeSource, { icon: LucideIcon; hue: Hue }> = {
+  salary: { icon: Briefcase, hue: 6 },
+  freelance: { icon: Laptop, hue: 1 },
+  business: { icon: Store, hue: 7 },
+  interest: { icon: Percent, hue: 3 },
+  dividend: { icon: TrendingUp, hue: 3 },
+  rental: { icon: Home, hue: 2 },
+  gift: { icon: Gift, hue: 5 },
+  refund: { icon: Undo2, hue: 4 },
+  other: { icon: Wallet, hue: 8 },
+};
 
 export function IncomeRow({ income }: { income: IncomeDTO }) {
   const router = useRouter();
@@ -33,9 +49,10 @@ export function IncomeRow({ income }: { income: IncomeDTO }) {
 
   return (
     <li className="flex items-center gap-3 px-4 py-3" data-testid="income-row">
+      <HueIcon icon={SOURCE_LOOK[income.source].icon} hue={SOURCE_LOOK[income.source].hue} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{income.description || INCOME_SOURCE_LABELS[income.source]}</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="truncate text-sm font-medium text-ink">{income.description || INCOME_SOURCE_LABELS[income.source]}</p>
+        <p className="text-xs text-ink-3">
           {INCOME_SOURCE_LABELS[income.source]} · {formatDateLong(new Date(income.date))}
         </p>
       </div>

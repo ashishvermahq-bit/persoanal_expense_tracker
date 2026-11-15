@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Gauge, LayoutDashboard, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
 import { QuickAddLink } from "@/components/expenses/quick-add-link";
 import { cn } from "@/lib/cn";
+import { hueStyle, type Hue } from "@/lib/color";
 
 const DESKTOP_ITEMS = [
   { href: "/dashboard", label: "Home" },
@@ -15,12 +16,13 @@ const DESKTOP_ITEMS = [
 ] as const;
 
 /** Mobile bottom bar: four tabs around the Add FAB (slot 2). Categories & preferences live behind the header's settings icon. */
-const TABS = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard, slot: 0 },
-  { href: "/expenses", label: "Expenses", icon: ReceiptIndianRupee, slot: 1 },
-  { href: "/income", label: "Income", icon: Wallet, slot: 3 },
-  { href: "/budgets", label: "Budgets", icon: Gauge, slot: 4 },
-] as const;
+// Each tab has its own hue (contrast-safe tones via hueStyle); labels stay ink.
+const TABS: { href: string; label: string; icon: typeof LayoutDashboard; slot: number; hue: Hue }[] = [
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard, slot: 0, hue: 1 },
+  { href: "/expenses", label: "Expenses", icon: ReceiptIndianRupee, slot: 1, hue: 2 },
+  { href: "/income", label: "Income", icon: Wallet, slot: 3, hue: 6 },
+  { href: "/budgets", label: "Budgets", icon: Gauge, slot: 4, hue: 7 },
+];
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
@@ -67,12 +69,13 @@ export function MobileNav() {
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 flex w-1/5 items-start justify-center pt-1.5 transition-[transform,opacity] duration-300 ease-out-soft",
+            "cat pointer-events-none absolute inset-y-0 left-0 flex w-1/5 items-start justify-center pt-1.5 transition-[transform,opacity] duration-300 ease-out-soft",
             active ? "opacity-100" : "opacity-0"
           )}
-          style={{ transform: `translateX(${(active?.slot ?? 0) * 100}%)` }}
+          style={{ transform: `translateX(${(active?.slot ?? 0) * 100}%)`, ...hueStyle(active?.hue ?? 1) }}
         >
-          <span className="h-8 w-14 rounded-full bg-primary/12" />
+          {/* Pill tint follows the active tab's hue and cross-fades as it slides. */}
+          <span className="h-8 w-14 rounded-full bg-[color-mix(in_srgb,var(--cat)_16%,transparent)] transition-[background-color] duration-300" />
         </span>
 
         {[0, 1, 2, 3, 4].map((slot) => {
@@ -99,10 +102,13 @@ export function MobileNav() {
                 aria-current={isOn ? "page" : undefined}
                 className={cn(
                   "flex h-full flex-col items-center justify-start gap-0.5 pt-2.5 text-micro font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
-                  isOn ? "text-primary-ink" : "text-ink-3"
+                  isOn ? "font-semibold text-ink" : "text-ink-3"
                 )}
               >
-                <Icon className={cn("size-6 transition-colors", isOn ? "text-primary" : "text-muted")} aria-hidden />
+                {/* Active: the tab's hue, popping once each time the tab becomes active. */}
+                <span key={isOn ? pathname : "idle"} className={cn("cat flex", isOn && "animate-tab-pop")} style={hueStyle(item.hue)}>
+                  <Icon className={cn("size-6 transition-colors", isOn ? "text-[var(--cat)]" : "text-muted")} aria-hidden />
+                </span>
                 {item.label}
               </Link>
             </li>

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useHydrated } from "@/components/ui/form";
 import { cn } from "@/lib/cn";
+import { hueStyle } from "@/lib/color";
 import { getResolvedThemeSnapshot, readStoredTheme, setTheme, subscribeTheme, type ResolvedTheme } from "@/lib/theme";
 import type { Theme } from "@/types/models";
 
@@ -71,7 +72,10 @@ export function ThemeToggleButton() {
       className="inline-flex size-9 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:size-11"
       data-testid="theme-toggle"
     >
-      {resolved === "dark" ? <Sun className="size-5" aria-hidden /> : <Moon className="size-5" aria-hidden />}
+      {/* Sun in the yellow hue (shown on dark), moon in violet (shown on light). */}
+      <span className="cat flex text-[var(--cat)]" style={hueStyle(resolved === "dark" ? 4 : 7)}>
+        {resolved === "dark" ? <Sun className="size-5" aria-hidden /> : <Moon className="size-5" aria-hidden />}
+      </span>
     </button>
   );
 }

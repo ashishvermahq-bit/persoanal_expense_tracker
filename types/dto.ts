@@ -93,6 +93,9 @@ export interface UpcomingDTO {
   nextRunAt: string;
   /** Whole IST days from today (0 = today). */
   dueInDays: number;
+  /** The rule's category look (expense rules), for its colour. */
+  categoryIcon: string | null;
+  categoryColor: string | null;
 }
 
 /** One period of the dashboard "Trends" panel. */

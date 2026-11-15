@@ -231,6 +231,12 @@
   --animate-type-in: type-in 0.38s steps(18, end) calc(var(--i, 0) * 260ms + 0.2s) both;
   /* Rubber-stamp landing: drops in, presses, settles. Delay via --i. */
   --animate-stamp: stamp 0.4s var(--ease-out-soft) calc(var(--i, 0) * 260ms + 0.2s) both;
+  /* Dashboard sections rising in, one after another: style={{ "--i": n }} (70ms apart). */
+  --animate-rise: list-in 0.32s var(--ease-out-soft) calc(min(var(--i, 0), 8) * 70ms) both;
+  /* Bottom-nav icon when its tab becomes active. */
+  --animate-tab-pop: tab-pop 0.32s var(--ease-back) both;
+  /* One-off left→right reveal for bars (no layout change: clip only). */
+  --animate-grow-x: grow-x 0.7s var(--ease-out-soft) 0.15s both;
   /* Save confirmation: a short haptic-style squeeze. */
   --animate-success-pop: success-pop 0.36s var(--ease-back) both;
   /* One-off line draw: give the path pathLength="1". */
@@ -287,6 +293,15 @@
     0% { opacity: 0; transform: scale(1.6) rotate(-14deg); }
     65% { opacity: 1; transform: scale(0.94) rotate(-8deg); }
     100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+  }
+  @keyframes tab-pop {
+    0% { transform: scale(0.8); }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  @keyframes grow-x {
+    from { clip-path: inset(0 100% 0 0 round 9999px); }
+    to { clip-path: inset(0 0 0 0 round 9999px); }
   }
   @keyframes success-pop {
     0% { transform: scale(0.6); opacity: 0; }

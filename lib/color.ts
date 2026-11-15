@@ -87,3 +87,18 @@ export function categoryStyle(color: string | null | undefined): React.CSSProper
   const t = categoryTones(color);
   return (t ? { "--cat-l": t.light, "--cat-d": t.dark } : {}) as React.CSSProperties;
 }
+
+/**
+ * Series hues (1–8) as icon/dot tones for the `cat` utility. Dark: the series
+ * token as-is (all ≥3:1 on their tint). Light: the smallest darkening that
+ * clears 3:1 on its own 18% tint (measured: orange 10%, aqua 16%, yellow 26%,
+ * magenta 18%; blue, green, violet and red pass as-is).
+ */
+const SERIES_LIGHT_DARKEN = [0, 10, 16, 26, 18, 0, 0, 0] as const;
+export type Hue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+export function hueStyle(hue: Hue): React.CSSProperties {
+  const darken = SERIES_LIGHT_DARKEN[hue - 1];
+  const token = `var(--series-${hue})`;
+  return { "--cat-l": darken ? `color-mix(in srgb, ${token} ${100 - darken}%, black)` : token, "--cat-d": token } as React.CSSProperties;
+}

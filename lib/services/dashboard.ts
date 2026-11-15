@@ -50,9 +50,13 @@ export const loadGlance = cache(async (userIdHex: string) => {
 
 /** Active recurring payments due in the next `days` days, soonest first. */
 export async function listUpcoming(userId: Types.ObjectId, limit = 3, days = 30): Promise<UpcomingDTO[]> {
-  const rules = await getUpcomingRecurring(userId, days);
+  const rules = (await getUpcomingRecurring(userId, days)).slice(0, limit);
   const todayMs = todayIST().getTime();
-  return rules.slice(0, limit).map((r) => {
+  const catIds = rules.map((r) => r.categoryId).filter((id): id is Types.ObjectId => !!id);
+  const cats = catIds.length ? await Category.find({ _id: { $in: catIds } }, { icon: 1, color: 1 }).lean() : [];
+  const look = new Map(cats.map((c) => [c._id.toHexString(), c]));
+  return rules.map((r) => {
+    const cat = r.categoryId ? look.get(r.categoryId.toHexString()) : undefined;
     const { year, month, day } = istParts(r.nextRunAt);
     return {
       id: r._id.toHexString(),
@@ -61,6 +65,8 @@ export async function listUpcoming(userId: Types.ObjectId, limit = 3, days = 30)
       amountPaise: r.amountPaise,
       nextRunAt: r.nextRunAt.toISOString(),
       dueInDays: Math.max(0, Math.round((istMidnight(year, month, day).getTime() - todayMs) / DAY_MS)),
+      categoryIcon: cat?.icon ?? null,
+      categoryColor: cat?.color ?? null,
     };
   });
 }

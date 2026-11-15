@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, api } from "@/lib/client";
 import { signupSchema } from "@/lib/validation/auth";
 import { fieldErrors } from "@/lib/validation/fields";
+import { markWelcome } from "@/components/dashboard/welcome-count-up";
 import { FormError } from "./form-error";
 import { useDesktopAutofocus } from "./use-desktop-autofocus";
 
@@ -34,6 +35,7 @@ export function SignupForm() {
     try {
       // No toast: the full navigation below would wipe it; the dashboard greets by name.
       await api("/api/auth/signup", { method: "POST", json: parsed.data });
+      markWelcome(); // the dashboard counts its hero figure up once
       // Full navigation, not router.replace + refresh: the refresh re-requests the
       // current route and can abort the pending navigation (stuck on this page).
       // The session cookie just changed, so every cached server render is stale anyway.

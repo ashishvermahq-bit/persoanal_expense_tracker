@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import type { Hue } from "@/lib/color";
+import { HueIcon } from "./hue-icon";
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
@@ -22,9 +25,17 @@ export function Card({ children, className, ...rest }: { children: ReactNode; cl
   );
 }
 
-/** H2 section label: 14px uppercase, tracked, muted. */
-export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
-  return <h2 className={cn("text-sm font-semibold uppercase tracking-[0.05em] text-ink-3", className)}>{children}</h2>;
+/**
+ * H2 section label: 14px uppercase, tracked, secondary ink. An optional icon in
+ * a series hue gives each section its own colour; the text stays ink.
+ */
+export function SectionLabel({ children, className, icon, hue }: { children: ReactNode; className?: string; icon?: LucideIcon; hue?: Hue }) {
+  return (
+    <h2 className={cn("flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.05em] text-ink-2", className)}>
+      {icon && hue && <HueIcon icon={icon} hue={hue} size="xs" />}
+      {children}
+    </h2>
+  );
 }
 
 /** Skeleton placeholder: pulses 0.6 → 1 opacity (1.5s). */

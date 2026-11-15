@@ -7,7 +7,9 @@ import {
   Crown,
   FileText,
   Gauge,
+  History,
   OctagonAlert,
+  PieChart,
   PiggyBank,
   Smartphone,
   TrendingDown,
@@ -24,12 +26,14 @@ import { Card, SectionLabel } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { istParts, todayIST } from "@/lib/dates";
 import { CategoryIcon } from "@/components/categories/category-icon";
+import { HueIcon } from "@/components/ui/hue-icon";
 import { categoryStyle } from "@/lib/color";
 import { computeInsights, monthQuery, safeToSpend, spendingPace, type InsightIcon, type InsightTone } from "@/lib/insights";
 import { formatPaise } from "@/lib/money";
 import type { Glance } from "@/lib/services/dashboard";
 import type { ExpenseDTO, UpcomingDTO } from "@/types/dto";
 import { ValuePop } from "./value-pop";
+import { WelcomeCountUp } from "./welcome-count-up";
 
 /* ------------------------------------------------------------------ hero */
 
@@ -61,7 +65,9 @@ export function HeroCard({ g }: { g: Glance }) {
 
       {/* Hero figure: 48px on ≥sm, scales down so lakhs still fit at 390px. Proportional figures. */}
       <p className="relative mt-1 text-[clamp(2.25rem,11vw,3rem)] font-semibold leading-tight tracking-tight text-ink" data-testid="month-spent">
-        <ValuePop value={g.current.totalExpensePaise}>{formatPaise(g.current.totalExpensePaise)}</ValuePop>
+        <ValuePop value={g.current.totalExpensePaise}>
+          <WelcomeCountUp paise={g.current.totalExpensePaise} />
+        </ValuePop>
       </p>
 
       <p className="relative mt-1 min-h-5 text-sm text-ink-2" data-testid="safe-to-spend">
@@ -171,11 +177,11 @@ export function TopCategories({ g }: { g: Glance }) {
   return (
     <Card className="p-4" data-testid="top-categories">
       <div className="flex items-center justify-between">
-        <SectionLabel>Top categories</SectionLabel>
+        <SectionLabel icon={PieChart} hue={1}>Top categories</SectionLabel>
         <span className="text-xs tabular-nums text-ink-3">{formatPaise(total)}</span>
       </div>
       {/* Thin segmented bar: no text on it; the rows below carry the figures. 2px gaps. */}
-      <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+      <div className="mt-3 flex h-2 animate-grow-x gap-0.5 overflow-hidden rounded-full" aria-hidden>
         {top.map((c) => (
           <span key={c.categoryId} className="cat h-full bg-[var(--cat)] first:rounded-l-full last:rounded-r-full" style={{ ...categoryStyle(g.categoryLook[c.categoryId]?.color), width: `${(c.totalPaise / total) * 100}%` }} />
         ))}
@@ -223,7 +229,7 @@ export function BudgetsGlance({ g }: { g: Glance }) {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between">
-        <SectionLabel>Budgets</SectionLabel>
+        <SectionLabel icon={Gauge} hue={7}>Budgets</SectionLabel>
         <Link href="/budgets" className="inline-flex min-h-9 items-center gap-1 text-xs font-medium text-primary-ink hover:underline">
           {sorted.length ? "See all" : "Set up"} <ArrowRight className="size-3" aria-hidden />
         </Link>
@@ -266,7 +272,7 @@ export function RecentActivity({ items }: { items: ExpenseDTO[] }) {
   return (
     <Card className="p-4">
       <div className="mb-2 flex items-center justify-between">
-        <SectionLabel>Recent</SectionLabel>
+        <SectionLabel icon={History} hue={2}>Recent</SectionLabel>
         <Link href="/expenses" className="inline-flex min-h-9 items-center gap-1 text-xs font-medium text-primary-ink hover:underline">
           All expenses <ArrowRight className="size-3" aria-hidden />
         </Link>
@@ -318,15 +324,17 @@ export function UpcomingList({ items }: { items: UpcomingDTO[] }) {
   if (items.length === 0) return null;
   return (
     <Card className="p-4">
-      <SectionLabel className="mb-2">Upcoming</SectionLabel>
+      <SectionLabel className="mb-2" icon={CalendarClock} hue={5}>Upcoming</SectionLabel>
       <ul className="divide-y divide-line">
         {items.map((u) => {
           const soon = u.dueInDays <= 2;
           return (
             <li key={u.id} className="flex min-h-14 items-center gap-3 py-2" data-testid="upcoming-item">
-              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                {u.kind === "income" ? <Wallet className="size-4" aria-hidden /> : <CalendarClock className="size-4" aria-hidden />}
-              </span>
+              {u.categoryColor || u.categoryIcon ? (
+                <CategoryIcon icon={u.categoryIcon} color={u.categoryColor} />
+              ) : (
+                <HueIcon icon={u.kind === "income" ? Wallet : CalendarClock} hue={u.kind === "income" ? 6 : 5} />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{u.title}</p>
                 <p className="text-xs tabular-nums text-ink-3">{formatPaise(u.amountPaise)}</p>

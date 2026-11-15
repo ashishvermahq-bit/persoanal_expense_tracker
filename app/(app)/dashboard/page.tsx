@@ -52,11 +52,13 @@ async function Glance() {
 
   return (
     <div className="space-y-5">
-      <HeroCard g={g} />
+      <div className="animate-rise" style={{ "--i": 0 } as React.CSSProperties}>
+        <HeroCard g={g} />
+      </div>
       {hasAny ? (
         <>
           <InsightChips g={g} />
-          <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
+          <div className="grid animate-rise gap-5 lg:grid-cols-[3fr_2fr]" style={{ "--i": 2 } as React.CSSProperties}>
             {/* DOM order = phone order (budgets before recent); desktop places them side by side. */}
             <div className="space-y-5 lg:col-start-2 lg:row-start-1">
               <BudgetsGlance g={g} />
@@ -69,13 +71,17 @@ async function Glance() {
               <RecentActivity items={recent.items} />
             </div>
           </div>
-          <Suspense fallback={<Skeleton className="h-14" />}>
-            <Trends />
-          </Suspense>
+          <div className="animate-rise" style={{ "--i": 3 } as React.CSSProperties}>
+            <Suspense fallback={<Skeleton className="h-14" />}>
+              <Trends />
+            </Suspense>
+          </div>
         </>
       ) : (
         <>
-          <DashboardEmpty />
+          <div className="animate-rise" style={{ "--i": 1 } as React.CSSProperties}>
+            <DashboardEmpty />
+          </div>
           <Suspense fallback={null}>
             <Upcoming />
           </Suspense>

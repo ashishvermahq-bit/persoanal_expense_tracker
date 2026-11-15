@@ -60,6 +60,13 @@ semantic tokens. `white` is remapped to `#fcfcfb` (the light surface).
     on light, `#4f46e5` → `#6b64e9` on dark). Unit-tested in `tests/unit/color.test.ts`.
   - Use it via `categoryStyle(color)` + the `cat` utility, then `var(--cat)` (`text-[var(--cat)]`,
     `bg-[var(--cat)]`, `cat-icon`). No colour → the muted token.
+  - **Series hues as icon colour** (`hueStyle(1–8)` + `HueIcon`): section headings (Budgets violet, Top
+    categories blue, Recent orange, Upcoming magenta, Trends aqua), bottom-nav tabs (Home blue, Expenses orange,
+    Income green, Budgets violet: active icon + pill tint, label stays ink), income sources (salary green,
+    freelance blue, …), login proof points, the theme toggle (sun yellow, moon violet). Dark: the token as-is.
+    Light: the smallest darkening that clears 3:1 on its own tint (orange 10%, aqua 16%, yellow 26%, magenta
+    18%); tested in `tests/unit/color.test.ts`.
+  - Upcoming payments wear their rule's category icon + colour.
   - The login passbook uses series tokens the same way (Kirana aqua, Rent violet, Food orange). Light aqua is
     2.74:1 on the card, so it's mixed 6% toward black (3.07:1); the others pass as-is.
 
@@ -143,7 +150,11 @@ All motion is CSS (`@theme` keyframes in `globals.css`). No animation library.
 | Type in | `animate-type-in` + `--i` | 0.38s steps(18), +260ms per line | clip-path reveal left→right | auth passbook lines |
 | Stamp | `animate-stamp` + `--i` | 0.4s ease-out-soft | scale 1.6→0.94→1, rotate to −8° | "Hisaab complete" seal |
 | Success pop | `animate-success-pop` | 0.36s ease-back | scale 0.6→1.12→1 | quick-add saved tick (with `navigator.vibrate(12)` where supported) |
-| Nav pill | transform transition | 0.3s ease-out-soft | one pill slides between tab slots | mobile bottom nav |
+| Nav pill | transform + background transition | 0.3s ease-out-soft | one pill slides between tab slots, its tint cross-fading to the tab's hue | mobile bottom nav |
+| Tab pop | `animate-tab-pop` | 0.32s ease-back | scale 0.8→1.12→1, once when a tab becomes active | bottom-nav icons |
+| Rise | `animate-rise` + `--i` | 0.32s ease-out-soft, +70ms per section | fade + 8px rise | dashboard sections (hero → cards → trends) |
+| Grow x | `animate-grow-x` | 0.7s ease-out-soft, once | clip-path reveal left→right | Top-categories split bar |
+| Welcome count-up | `WelcomeCountUp` (JS) | 900ms ease-out, once | hero figure counts ₹0 → spent, width reserved | only the first dashboard view after sign-in/sign-up (one-time sessionStorage flag) |
 | Swipe | transform transition (none while dragging) | 0.2s | row snaps open/closed | expense list |
 
 Easings: `--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1)`, `--ease-back`
@@ -166,11 +177,12 @@ screen, brand panel 55% / form 45%.
 |---|---|---|
 | Guilloche | `guilloche.tsx` | Original abstract rosettes + sine band (no currency, emblem or logo). Nested `<use>` keeps it ~1.5 KB; `text-primary` at 9% (light) / 14% (dark). Needs a unique `idPrefix` per instance. Drifts ≤3px over 48s. |
 | ₹ medallion | `rupee-medallion.tsx` | Primary-tinted coin with a dotted "milled" edge; bounces in once, then breathes. |
+| Passbook strip (phones) | `passbook-preview.tsx` → `PassbookStrip` | one line under the form: "Example" + three coloured dots with amounts; never pushes the form down. |
 | Passbook preview | `passbook-preview.tsx` | "Paisa passbook": ruled stub (date · particulars · debit · balance) with balance b/f, three debits that type in, a closing balance that ticks down (width reserved), and a "Hisaab complete" stamp. Labelled "Example" + "Sample data"; `role="img"` one-line summary. No SVG beyond one icon. Chosen over a gullak (saving isn't the core job) and a UPI-receipt stack ("auto-sorted" would claim a feature Paisa doesn't have). |
 | Password field | `ui/password-input.tsx` | Show/hide (`aria-pressed`, one toggle can drive several fields), Caps Lock warning, optional requirements checklist that mirrors `passwordSchema` (icon + text + sr-only state). |
 
-Custom inline SVG on an auth page is ~4 KB (both guilloche instances, medallion,
-sparkline); Lucide icons add the rest. Claims on the panel are limited to
+Inline SVG on an auth page, icons included, is 4.1 KB (login) / 4.9 KB (signup):
+one guilloche instance serves both layouts (phone strip and desktop panel). Claims on the panel are limited to
 features that exist (Indian number formatting, FY reports and 80C/80D tags,
 3-tap quick add).
 
