@@ -223,7 +223,7 @@ export function ExpenseForm({
               <Paperclip className="size-4" aria-hidden />
               Attach receipt
             </Button>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">JPG, PNG, WebP or PDF up to 5 MB.</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">JPG, PNG, WebP or PDF up to 4 MB.</p>
           </div>
         )}
       </div>

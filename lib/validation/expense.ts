@@ -1,6 +1,10 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { PAYMENT_METHODS, TAX_SECTIONS, UPI_APPS } from "@/types/models";
+import { RECEIPT_URL_PATTERN } from "@/lib/receipt-url";
 import { amountFields, dateInputSchema, objectIdSchema, optionalText, tagsSchema } from "./common";
+
+/** Only a receipt this app stored (no off-site or javascript: URLs in an <a>/<img>). */
+const receiptUrlSchema = optionalText(500).refine((v) => v == null || RECEIPT_URL_PATTERN.test(v), "Upload the receipt again");
 
 // No defaults here so `.partial()` (for PATCH) yields truly-absent keys.
 const expenseBase = z.object({
@@ -12,7 +16,7 @@ const expenseBase = z.object({
   description: optionalText(200),
   merchant: optionalText(100),
   notes: optionalText(2000),
-  receiptUrl: optionalText(500),
+  receiptUrl: receiptUrlSchema,
   tags: tagsSchema,
 });
 
