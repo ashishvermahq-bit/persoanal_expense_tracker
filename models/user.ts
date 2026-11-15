@@ -16,6 +16,10 @@ const userSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true, select: false },
     isEmailVerified: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
+    // Brute-force protection: incremented on bad password, reset on success.
+    failedLoginCount: { type: Number, default: 0, min: 0 },
+    lockedUntil: { type: Date, default: null },
+    onboardedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

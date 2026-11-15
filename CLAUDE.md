@@ -9,7 +9,18 @@ npm run dev       # Start development server (Turbopack, http://localhost:3000)
 npm run build     # Production build
 npm run start     # Start production server
 npm run lint      # Run ESLint (not next lint — that was removed in Next.js 16)
+npm run typecheck # tsc --noEmit (run `npx next typegen` first if LayoutProps/PageProps are missing)
+npm test          # Vitest unit tests in tests/unit (model tests spin up mongodb-memory-server)
+npm run test:e2e  # Playwright e2e in tests/e2e
 ```
+
+## Domain conventions (do not break these)
+
+- **Money is integer paise.** Every `amountPaise` field and every API payload is an integer (₹450.50 → `45050`). Use `toPaise` / `formatPaise` in `lib/money.ts`; never store or compute with rupee floats. Display uses `Intl.NumberFormat('en-IN')` → `₹1,23,456.78`.
+- **Dates are IST.** All "today / this month / this FY" logic goes through `lib/dates.ts` (`todayIST`, `monthRange`, `fyRange`, …). Display is DD/MM/YYYY. Indian FY = 1 Apr – 31 Mar, labelled by start year (`fyLabel(2025)` → "FY 2025-26"); users can switch to calendar year via `preferences.fyStart`.
+- **Enums live in `types/models.ts`** (`PAYMENT_METHODS`, `TAX_SECTIONS`, …) and are imported by Mongoose schemas, Zod validators and UI alike. Add new values there only.
+- **Every query is scoped by `userId`** and soft-deleted rows (`deletedAt !== null`) are excluded. System categories have `userId: null, isSystem: true` and are seeded by `lib/seed/categories.ts`.
+- `MonthlySummary` is a cache; recompute it after any expense/income write for the affected month rather than editing it directly.
 
 ## This is Next.js 16 — read the bundled docs before writing code
 
