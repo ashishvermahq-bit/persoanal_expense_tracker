@@ -1,49 +1,38 @@
-import { ok, parseBody, withAuth } from "@/lib/api";
-import { listRecurringRules, createRecurringRule, generateRecurringEntries } from "@/lib/services/recurring";
 import { z } from "zod";
-import { RECURRENCE_FREQUENCIES, PAYMENT_METHODS, UPI_APPS, TAX_SECTIONS, INCOME_SOURCES, ENTRY_KINDS } from "@/types/models";
-import { objectIdSchema } from "@/lib/validation/common";
+import { ok, parseBody, withAuth } from "@/lib/api";
+import { createRecurringRule, generateRecurringEntries, listRecurringRules } from "@/lib/services/recurring";
+import { objectIdSchema, paiseSchema } from "@/lib/validation/common";
+import { ENTRY_KINDS, INCOME_SOURCES, PAYMENT_METHODS, RECURRENCE_FREQUENCIES, TAX_SECTIONS, UPI_APPS } from "@/types/models";
 
-const createRecurringRuleSchema = z.object({
-  kind: z.enum(ENTRY_KINDS),
-  title: z.string().min(1).max(200),
-  amountPaise: z.number().int().positive(),
-  categoryId: objectIdSchema.optional().nullable(),
-  incomeSource: z.enum(INCOME_SOURCES).optional().nullable(),
-  paymentMethod: z.enum(PAYMENT_METHODS),
-  upiApp: z.enum(UPI_APPS).optional().nullable(),
-  taxSection: z.enum(TAX_SECTIONS),
-  frequency: z.enum(RECURRENCE_FREQUENCIES),
-  dayOfMonth: z.number().int().min(1).max(31),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime().optional().nullable(),
-  remindDaysBefore: z.number().int().min(0).max(30),
-  isActive: z.boolean(),
-});
+const createRecurringRuleSchema = z
+  .strictObject({
+    kind: z.enum(ENTRY_KINDS),
+    title: z.string().trim().min(1).max(100),
+    amountPaise: paiseSchema,
+    categoryId: objectIdSchema.nullable().default(null),
+    incomeSource: z.enum(INCOME_SOURCES).nullable().default(null),
+    paymentMethod: z.enum(PAYMENT_METHODS).default("upi"),
+    upiApp: z.enum(UPI_APPS).nullable().default(null),
+    taxSection: z.enum(TAX_SECTIONS).default("none"),
+    frequency: z.enum(RECURRENCE_FREQUENCIES),
+    dayOfMonth: z.number().int().min(1).max(31),
+    startsAt: z.iso.datetime({ offset: true }).transform((s) => new Date(s)),
+    endsAt: z.iso.datetime({ offset: true }).transform((s) => new Date(s)).nullable().default(null),
+    remindDaysBefore: z.number().int().min(0).max(30).default(2),
+    isActive: z.boolean().default(true),
+  })
+  .refine((r) => !r.endsAt || r.endsAt > r.startsAt, { path: ["endsAt"], message: "End date must be after the start date" });
 
 export const GET = withAuth(async (_request, _ctx, { userId }) => {
-  const rules = await listRecurringRules(userId);
-  return ok(rules);
+  return ok(await listRecurringRules(userId));
 });
 
 export const POST = withAuth(async (request, _ctx, { userId }) => {
-  const { Types } = await import("mongoose");
   const input = await parseBody(request, createRecurringRuleSchema);
-  const rule = await createRecurringRule(userId, {
-    ...input,
-    categoryId: input.categoryId ? new Types.ObjectId(input.categoryId) : null,
-    incomeSource: input.incomeSource ?? null,
-    upiApp: input.upiApp ?? null,
-    startsAt: new Date(input.startsAt),
-    endsAt: input.endsAt ? new Date(input.endsAt) : null,
-    nextRunAt: new Date(input.startsAt),
-    lastGeneratedAt: null,
-  });
-  return ok(rule, { status: 201 });
+  return ok(await createRecurringRule(userId, input), { status: 201 });
 });
 
+/** Generate this user's due entries now (the cron route does it for everyone daily). */
 export const PUT = withAuth(async (_request, _ctx, { userId }) => {
-  // Manually generate recurring entries for the user (normally done by cron)
-  const generated = await generateRecurringEntries(userId);
-  return ok({ generated });
+  return ok({ generated: await generateRecurringEntries(userId) });
 });
