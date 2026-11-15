@@ -65,8 +65,7 @@ export function PreferencesForm({ preferences }: { preferences: PreferencesDTO }
       router.refresh();
     } catch (err) {
       if (err instanceof ApiClientError) {
-        setErrors(err.fields);
-        if (!Object.keys(err.fields).length) toast.error(err.message);
+        if (err.fields && !Object.keys(err.fields).length) toast.error(err.message);
       } else toast.error("Network error. Try again.");
     } finally {
       setLoading(false);
