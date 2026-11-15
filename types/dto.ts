@@ -5,10 +5,12 @@
 import type {
   CategoryKind,
   IncomeSource,
-  PaymentMethod,
+  PaymentMethod as PaymentMethodType,
   TaxSection,
   UpiApp,
 } from "./models";
+
+export type PaymentMethod = PaymentMethodType;
 
 export interface CategoryDTO {
   id: string;
