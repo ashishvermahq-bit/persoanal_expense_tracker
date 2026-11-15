@@ -1,26 +1,29 @@
 "use client";
 
-import { Form } from "@/components/ui/form";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
+import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, api } from "@/lib/client";
 import { loginSchema } from "@/lib/validation/auth";
 import { fieldErrors } from "@/lib/validation/fields";
+import { FormError } from "./form-error";
+import { useDesktopAutofocus } from "./use-desktop-autofocus";
 
 export function LoginForm() {
-  const router = useRouter();
   const nextPath = useSearchParams().get("next") ?? undefined;
+  const emailRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  useDesktopAutofocus(emailRef);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError(null);
+    // Fields are uncontrolled: typed values survive any error below.
     const form = new FormData(e.currentTarget);
     const parsed = loginSchema.safeParse(Object.fromEntries(form));
     if (!parsed.success) {
@@ -30,10 +33,12 @@ export function LoginForm() {
     setErrors({});
     setLoading(true);
     try {
-      const { user } = await api<{ user: { name: string } }>("/api/auth/login", { method: "POST", json: parsed.data });
-      toast.success(`Welcome back, ${user.name.split(" ")[0]}`);
-      router.replace(safeNext(nextPath));
-      router.refresh();
+      // No toast: the full navigation below would wipe it; the dashboard greets by name.
+      await api("/api/auth/login", { method: "POST", json: parsed.data });
+      // Full navigation, not router.replace + refresh: the refresh re-requests the
+      // current route and can abort the pending navigation (stuck on this page).
+      // The session cookie just changed, so every cached server render is stale anyway.
+      window.location.assign(safeNext(nextPath));
     } catch (err) {
       if (err instanceof ApiClientError) {
         setErrors(err.fields);
@@ -46,28 +51,11 @@ export function LoginForm() {
   }
 
   return (
-    <Form onSubmit={onSubmit} noValidate className="space-y-5" data-testid="login-form">
-      <Input label="Email" name="email" type="email" autoComplete="email" inputMode="email" required placeholder="you@example.com" error={errors.email} />
-      <Input
-        label="Password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        required
-        placeholder="••••••••"
-        error={errors.password}
-        labelAside={
-          <Link href="#" className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
-            Forgot password?
-          </Link>
-        }
-      />
-      {formError && (
-        <p role="alert" data-testid="form-error" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {formError}
-        </p>
-      )}
-      <Button type="submit" loading={loading} className="mt-1 w-full">
+    <Form onSubmit={onSubmit} noValidate className="space-y-4" data-testid="login-form">
+      <Input ref={emailRef} label="Email" name="email" type="email" autoComplete="email" inputMode="email" required placeholder="you@example.com" error={errors.email} />
+      <PasswordInput label="Password" name="password" autoComplete="current-password" required placeholder="••••••••" error={errors.password} />
+      {formError && <FormError message={formError} />}
+      <Button type="submit" size="lg" loading={loading} className="w-full">
         Sign in
       </Button>
     </Form>

@@ -1,20 +1,24 @@
 "use client";
 
-import { Form } from "@/components/ui/form";
-import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, api } from "@/lib/client";
 import { signupSchema } from "@/lib/validation/auth";
 import { fieldErrors } from "@/lib/validation/fields";
+import { FormError } from "./form-error";
+import { useDesktopAutofocus } from "./use-desktop-autofocus";
 
 export function SignupForm() {
-  const router = useRouter();
+  const nameRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  // One "Show password" toggle reveals both fields, so you can check they match.
+  const [showPasswords, setShowPasswords] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  useDesktopAutofocus(nameRef);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,10 +32,13 @@ export function SignupForm() {
     setErrors({});
     setLoading(true);
     try {
-      const { user } = await api<{ user: { name: string } }>("/api/auth/signup", { method: "POST", json: parsed.data });
-      toast.success(`Account created. Welcome, ${user.name.split(" ")[0]}!`);
-      router.replace("/dashboard");
-      router.refresh();
+      // No toast: the full navigation below would wipe it; the dashboard greets by name.
+      await api("/api/auth/signup", { method: "POST", json: parsed.data });
+      // Full navigation, not router.replace + refresh: the refresh re-requests the
+      // current route and can abort the pending navigation (stuck on this page).
+      // The session cookie just changed, so every cached server render is stale anyway.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate hard navigation on auth change: drops the previous session's client router cache / preserved route state
+      window.location.assign("/dashboard");
     } catch (err) {
       if (err instanceof ApiClientError) {
         setErrors(err.fields);
@@ -44,26 +51,32 @@ export function SignupForm() {
   }
 
   return (
-    <Form onSubmit={onSubmit} noValidate className="space-y-5" data-testid="signup-form">
-      <Input label="Full name" name="name" autoComplete="name" required placeholder="Priya Sharma" error={errors.name} />
+    <Form onSubmit={onSubmit} noValidate className="space-y-4" data-testid="signup-form">
+      <Input ref={nameRef} label="Full name" name="name" autoComplete="name" required placeholder="Priya Sharma" error={errors.name} />
       <Input label="Email" name="email" type="email" autoComplete="email" inputMode="email" required placeholder="you@example.com" error={errors.email} />
-      <Input
+      <PasswordInput
         label="Password"
         name="password"
-        type="password"
         autoComplete="new-password"
         required
         placeholder="••••••••"
         error={errors.password}
-        hint={errors.password ? undefined : "At least 8 characters with a letter and a number"}
+        visible={showPasswords}
+        onVisibleChange={setShowPasswords}
+        showRequirements
       />
-      <Input label="Confirm password" name="confirmPassword" type="password" autoComplete="new-password" required placeholder="••••••••" error={errors.confirmPassword} />
-      {formError && (
-        <p role="alert" data-testid="form-error" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {formError}
-        </p>
-      )}
-      <Button type="submit" loading={loading} className="mt-1 w-full">
+      <PasswordInput
+        label="Confirm password"
+        name="confirmPassword"
+        autoComplete="new-password"
+        required
+        placeholder="••••••••"
+        error={errors.confirmPassword}
+        visible={showPasswords}
+        toggle={false}
+      />
+      {formError && <FormError message={formError} />}
+      <Button type="submit" size="lg" loading={loading} className="w-full">
         Create account
       </Button>
     </Form>

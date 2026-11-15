@@ -120,6 +120,8 @@ All motion is CSS (`@theme` keyframes in `globals.css`). No animation library.
 | Skeleton | `animate-pulse` | 1.5s ease-in-out ∞ | opacity 0.6↔1 | Suspense fallbacks |
 | Toast | Sonner | Sonner's built-in slide from top, 3s duration | | `theme/app-toaster.tsx` |
 | Check pop | `animate-check-pop` | 0.5s ease-out | scale 0→1.3→1 | success toast icon |
+| Drift | `animate-drift` | 48s ease-in-out ∞ alternate | translate ≤3px | auth guilloche background |
+| Draw | `animate-draw` (path needs `pathLength="1"` + `stroke-dasharray="1"`) | 0.9s ease-out, 0.25s delay, once | stroke-dashoffset 1→0 | sparkline on the auth ledger preview |
 
 Easings: `--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1)`, `--ease-back`
 (the bounce curve above).
@@ -131,7 +133,25 @@ animation-only.
 
 ---
 
-## 4. Dark mode
+## 4. Auth screens ("Har rupaye ka hisaab")
+
+`components/auth/*`. Phones: compact brand header over a faded strip of
+linework, then the form card (above the fold at 390×844). ≥1024px: split
+screen, brand panel 55% / form 45%.
+
+| Piece | File | Notes |
+|---|---|---|
+| Guilloche | `guilloche.tsx` | Original abstract rosettes + sine band (no currency, emblem or logo). Nested `<use>` keeps it ~1.5 KB; `text-primary` at 9% (light) / 14% (dark). Needs a unique `idPrefix` per instance. Drifts ≤3px over 48s. |
+| ₹ medallion | `rupee-medallion.tsx` | Primary-tinted coin with a dotted "milled" edge; bounces in once, then breathes. |
+| Ledger preview | `ledger-preview.tsx` | Sample month, labelled "Example" + "Sample data"; `role="img"` with a one-line summary for screen readers. Count-up (900ms, width reserved), sparkline draw, staggered rows. Runs once, never loops. |
+| Password field | `ui/password-input.tsx` | Show/hide (`aria-pressed`, one toggle can drive several fields), Caps Lock warning, optional requirements checklist that mirrors `passwordSchema` (icon + text + sr-only state). |
+
+Custom inline SVG on an auth page is ~4 KB (both guilloche instances, medallion,
+sparkline); Lucide icons add the rest. Claims on the panel are limited to
+features that exist (Indian number formatting, FY reports and 80C/80D tags,
+3-tap quick add).
+
+## 5. Dark mode
 
 - Designed dark-first: dark steps are chosen for the dark surface, not inverted.
 - `<html data-theme="light|dark">` is set by an inline script in `<head>`
@@ -148,7 +168,7 @@ there. The saved server value is not yet pushed down on login.
 
 ---
 
-## 5. iOS safe areas
+## 6. iOS safe areas
 
 `viewport-fit=cover` is set in `app/layout.tsx`. With the
 `black-translucent` status bar (installed PWA), content runs under the notch
@@ -167,7 +187,7 @@ Toasts offset by `env(safe-area-inset-top)`. Don't combine `px-safe` with
 
 ---
 
-## 6. Accessibility checklist (WCAG 2.1 AA)
+## 7. Accessibility checklist (WCAG 2.1 AA)
 
 Contrast, measured on the card surface (`#fcfcfb` light / `#1a1a19` dark):
 
@@ -194,7 +214,7 @@ Contrast, measured on the card surface (`#fcfcfb` light / `#1a1a19` dark):
 
 ---
 
-## 7. Deviations from the original brief (and why)
+## 8. Deviations from the original brief (and why)
 
 | Brief said | Shipped | Why |
 |---|---|---|
@@ -209,3 +229,14 @@ Contrast, measured on the card surface (`#fcfcfb` light / `#1a1a19` dark):
 | Bottom-sheet footer sticky | header sticky, actions at the end of the scrolling body | form actions live inside each form; making them sticky needs a slot API |
 | Framer Motion | CSS keyframes + one Web Animations call | no runtime dependency needed for these effects |
 | Figma file | not produced | needs Figma itself; tokens above map 1:1 to Figma variables |
+
+### Auth-screen brief deviations
+
+| Brief said | Shipped | Why |
+|---|---|---|
+| Ledger rows "Kirana, Rent, UPI payments" | Rent, Kirana, Food & dining | UPI is a payment mode in this app, not a category; mixing the two would misteach the model |
+| Autofocus email on desktop | email on login; Full name on signup (desktop only) | it's the first field of the signup form |
+| SVG < 6 KB | custom art ~4 KB; Lucide icons add ~2.5 KB more | icons are the shared icon set used app-wide |
+| Keep "Forgot password?" | removed | it linked to `#`; password reset isn't built (needs an email provider) |
+| Welcome toasts after sign-in/up | removed | auth now ends in a full page load (which would wipe the toast); the dashboard greets by name |
+| `router.replace` + `router.refresh` after auth | full navigation; logout is a native form post → 303 | the refresh could abort the navigation (stuck on /signup); a hard load also drops the previous session's client cache; logout works before hydration |

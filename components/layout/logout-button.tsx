@@ -1,33 +1,19 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { LogOut } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/client";
 
+/**
+ * A native form post, no JavaScript: works before hydration, and the server's
+ * 303 to /login is a full navigation that discards the signed-out user's
+ * client-side state. See app/api/auth/logout/route.ts.
+ */
 export function LogoutButton() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
-  async function logout() {
-    setLoading(true);
-    try {
-      await api("/api/auth/logout", { method: "POST" });
-      router.replace("/login");
-      router.refresh();
-    } catch {
-      toast.error("Could not sign out. Try again.");
-      setLoading(false);
-    }
-  }
-
   return (
-    // Icon-only on phones (the header is tight); the label is still announced.
-    <Button variant="secondary" size="sm" onClick={logout} loading={loading} aria-label="Sign out" title="Sign out" data-testid="logout" className="px-2.5 sm:px-3">
-      {!loading && <LogOut className="size-3.5" aria-hidden />}
-      <span className="hidden sm:inline">Sign out</span>
-    </Button>
+    <form method="post" action="/api/auth/logout">
+      {/* Icon-only on phones (the header is tight); the label is still announced. */}
+      <Button type="submit" variant="secondary" size="sm" aria-label="Sign out" title="Sign out" data-testid="logout" className="px-2.5 sm:px-3">
+        <LogOut className="size-3.5" aria-hidden />
+        <span className="hidden sm:inline">Sign out</span>
+      </Button>
+    </form>
   );
 }
