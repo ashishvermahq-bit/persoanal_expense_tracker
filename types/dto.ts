@@ -82,6 +82,23 @@ export interface MonthlySummaryDTO {
   lastCalculatedAt: string;
 }
 
+export interface BudgetDTO {
+  id: string;
+  categoryId: string;
+  amountPaise: number;
+  year: number | null;
+  month: number | null;
+}
+
+export interface BudgetWarning {
+  status: "warning" | "over";
+  categoryId: string;
+  categoryName: string;
+  budgetPaise: number;
+  spendPaise: number;
+  message: string;
+}
+
 export interface PreferencesDTO {
   currency: string;
   timezone: string;

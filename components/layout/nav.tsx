@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Plus, ReceiptIndianRupee, Tags, Wallet } from "lucide-react";
+import { LayoutDashboard, Plus, ReceiptIndianRupee, Tags, Wallet, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const ITEMS = [
@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/expenses", label: "Expenses", icon: ReceiptIndianRupee },
   { href: "/add", label: "Add", icon: Plus, primary: true },
   { href: "/income", label: "Income", icon: Wallet },
+  { href: "/budgets", label: "Budgets", icon: TrendingUp },
   { href: "/categories", label: "Categories", icon: Tags },
 ] as const;
 
@@ -49,7 +50,7 @@ export function MobileNav() {
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden dark:border-zinc-800 dark:bg-zinc-900/95"
     >
-      <ul className="grid h-16 grid-cols-5">
+      <ul className="grid h-16 grid-cols-6">
         {ITEMS.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
