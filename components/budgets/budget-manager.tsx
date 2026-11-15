@@ -3,7 +3,7 @@
 import { Form } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Gauge, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionLabel } from "@/components/ui/page-header";
 import { toast } from "sonner";
@@ -118,13 +118,13 @@ export function BudgetManager({
       </div>
 
       {budgets.length === 0 ? (
-        <EmptyState icon={Gauge} title="No budgets yet" description="Set a monthly limit for a category. You'll get a heads-up at 80% and when you go over." />
+        <EmptyState art="gauge" title="No budgets yet" description="Set a monthly limit for a category. You'll get a heads-up at 80% and when you go over." />
       ) : (
         <ul className="divide-y divide-line">
           {budgets.map((b, i) => (
             <li key={b.id} className="flex animate-list-in items-center gap-2" style={{ "--i": i } as React.CSSProperties}>
               <div className="min-w-0 flex-1">
-                <BudgetMeter categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
+                <BudgetMeter layout="adaptive" categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
               </div>
               {/* Always visible: hover-only controls are unreachable on touch screens. */}
               <Button

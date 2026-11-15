@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { Budget } from "@/models/budget";
 import { Category } from "@/models/category";
 import { Expense } from "@/models/expense";
+import { monthRange } from "@/lib/dates";
 import { compact } from "./compact";
 import type { BudgetDTO } from "@/types/dto";
 import type { CreateBudget } from "@/lib/validation/budget";
@@ -51,10 +52,8 @@ export async function listBudgetsWithSpend(
   const categoryMap = new Map(categories.map((c) => [c._id.toString(), c.name]));
 
   // Get spend for each category in this month
-  const startOfMonth = new Date(year, month - 1, 1);
-  startOfMonth.setUTCHours(0, 0, 0, 0);
-  const startOfNextMonth = new Date(year, month, 1);
-  startOfNextMonth.setUTCHours(0, 0, 0, 0);
+  // IST month boundaries (server-local midnight would misfile 00:00–05:30 IST).
+  const { start: startOfMonth, end: startOfNextMonth } = monthRange(year, month);
 
   interface SpendAgg {
     _id: Types.ObjectId;
@@ -148,10 +147,8 @@ export async function getBudgetForCategory(
   if (!category) return null;
 
   // Get current month's spend for this category
-  const startOfMonth = new Date(year, month - 1, 1);
-  startOfMonth.setUTCHours(0, 0, 0, 0);
-  const startOfNextMonth = new Date(year, month, 1);
-  startOfNextMonth.setUTCHours(0, 0, 0, 0);
+  // IST month boundaries (server-local midnight would misfile 00:00–05:30 IST).
+  const { start: startOfMonth, end: startOfNextMonth } = monthRange(year, month);
 
   const [spendResult] = await Expense.aggregate([
     {

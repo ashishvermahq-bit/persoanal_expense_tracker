@@ -1,73 +1,47 @@
-// Service Worker for offline support and caching strategy
-const CACHE_VERSION = "v1";
-const CACHE_NAME = `paisa-${CACHE_VERSION}`;
+// Paisa service worker: caches STATIC assets only.
+//
+// Never caches HTML, RSC payloads or API responses: they contain a signed-in
+// user's money data, and on a shared phone a cached dashboard would outlive
+// logout. Navigations and data always go to the network.
+//
+// v2: activating this deletes the v1 cache, which did store authenticated pages.
+const CACHE = "paisa-static-v2";
 
-const CACHE_URLS = [
-  "/",
-  "/dashboard",
-  "/add",
-  "/expenses",
-  "/income",
-  "/budgets",
-  "/categories",
-  "/preferences",
-];
+// Content-hashed build output and public icons are safe to cache forever.
+function isStaticAsset(url) {
+  if (url.origin !== self.location.origin) return false;
+  if (url.pathname.startsWith("/_next/static/")) return true;
+  return /^\/(icon[^/]*\.(png|svg)|apple-touch-icon\.png|manifest\.json|favicon\.ico)$/.test(url.pathname);
+}
 
-// Install event: cache essential resources
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(CACHE_URLS).catch(() => {
-        // Fail silently - not all URLs may be available during install
-      });
-    })
-  );
-  self.skipWaiting();
-});
+self.addEventListener("install", () => self.skipWaiting());
 
-// Activate event: clean up old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    })
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(names.filter((n) => n !== CACHE).map((n) => caches.delete(n)));
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
-// Fetch event: network-first, then cache
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  // Everything except static assets: let the browser handle it (network only).
+  if (!isStaticAsset(url)) return;
 
-  // Skip API requests for now (they need fresh data)
-  if (request.url.includes("/api/")) {
-    return;
-  }
-
-  // GET requests: network-first, fallback to cache
-  if (request.method === "GET") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful responses
-          if (response && response.status === 200) {
-            const cache_response = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, cache_response);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache on network error
-          return caches.match(request).then((response) => {
-            return response || new Response("Offline - page not cached", { status: 503 });
-          });
-        })
-    );
-  }
+  // Static: cache-first, fill on miss.
+  event.respondWith(
+    (async () => {
+      const cache = await caches.open(CACHE);
+      const hit = await cache.match(request);
+      if (hit) return hit;
+      const response = await fetch(request);
+      if (response.ok && response.type === "basic") cache.put(request, response.clone());
+      return response;
+    })()
+  );
 });

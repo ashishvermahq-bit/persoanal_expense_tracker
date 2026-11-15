@@ -26,7 +26,8 @@ function escapeRegex(s: string) {
 
 export function buildExpenseFilter(userId: Types.ObjectId, f: ExpenseFilters): Filter {
   const q: Filter = { userId, deletedAt: null };
-  if (f.from || f.to) q.date = { ...(f.from ? { $gte: f.from } : {}), ...(f.to ? { $lt: f.to } : {}) };
+  // `to` is inclusive (it is the last day the user picked): compare against the next IST midnight.
+  if (f.from || f.to) q.date = { ...(f.from ? { $gte: f.from } : {}), ...(f.to ? { $lt: new Date(f.to.getTime() + 86_400_000) } : {}) };
   if (f.categoryId?.length) q.categoryId = { $in: f.categoryId.map((id: string) => new Types.ObjectId(id)) };
   if (f.paymentMethod?.length) q.paymentMethod = { $in: f.paymentMethod };
   if (f.taxSection?.length) q.taxSection = { $in: f.taxSection };
@@ -124,6 +125,20 @@ export async function deleteExpense(userId: Types.ObjectId, id: string): Promise
   );
   if (!doc) throw new ApiError("NOT_FOUND", "Expense not found");
   await recomputeForDates(userId, [doc.date]);
+}
+
+/** Undo a soft delete (the list's 5-second "Undo" toast). Only the owner's own deleted rows. */
+export async function restoreExpense(userId: Types.ObjectId, id: string): Promise<ExpenseDTO> {
+  if (!Types.ObjectId.isValid(id)) throw new ApiError("NOT_FOUND", "Expense not found");
+  const doc = await Expense.findOneAndUpdate(
+    { _id: new Types.ObjectId(id), userId, deletedAt: { $ne: null } },
+    { $set: { deletedAt: null } },
+    { returnDocument: "after", lean: true }
+  );
+  if (!doc) throw new ApiError("NOT_FOUND", "Expense not found");
+  await recomputeForDates(userId, [doc.date]);
+  const cat = await Category.findById(doc.categoryId, { name: 1, icon: 1, color: 1 }).lean();
+  return toExpenseDTO(doc, cat);
 }
 
 /** The user's most-used categories recently — drives the quick-add chip order. */

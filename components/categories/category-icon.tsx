@@ -91,6 +91,7 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 
 export const ICON_NAMES = Object.keys(CATEGORY_ICONS);
 
+/** Entity colours a user can give a category (stored per category, not theme tokens). */
 export const CATEGORY_COLORS = [
   "#16a34a", "#0d9488", "#0ea5e9", "#2563eb", "#4f46e5", "#7c3aed", "#c026d3", "#db2777",
   "#e11d48", "#dc2626", "#ea580c", "#f59e0b", "#a16207", "#64748b",
@@ -108,13 +109,19 @@ export function CategoryIcon({
   className?: string;
 }) {
   const Icon = (icon && CATEGORY_ICONS[icon]) || Tag;
-  const bg = color ?? "#64748b";
   const dims = size === "sm" ? "size-7 [&>svg]:size-3.5" : size === "lg" ? "size-12 [&>svg]:size-6" : "size-9 [&>svg]:size-4";
+  // The category's own colour is user data (picked from CATEGORY_COLORS). The tint
+  // keeps its hue; the glyph is mixed toward the theme ink so it stays ≥3:1 on
+  // both the light and the dark surface. No colour → the muted token.
   return (
     <span
       aria-hidden
-      className={cn("inline-flex shrink-0 items-center justify-center rounded-full", dims, className)}
-      style={{ backgroundColor: `${bg}1f`, color: bg }}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--cat)_14%,transparent)] text-[color-mix(in_oklab,var(--cat)_72%,var(--ink))]",
+        dims,
+        className
+      )}
+      style={{ "--cat": color ?? "var(--muted)" } as React.CSSProperties}
     >
       <Icon />
     </span>

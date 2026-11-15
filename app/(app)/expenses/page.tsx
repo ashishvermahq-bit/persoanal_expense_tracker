@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { Plus } from "lucide-react";
 import { ExpenseList } from "@/components/expenses/expense-list";
+import { QuickAddLink } from "@/components/expenses/quick-add-link";
+import { todayIST } from "@/lib/dates";
 import { FilterBar } from "@/components/expenses/filter-bar";
 import { buttonClassName } from "@/components/ui/button";
 import { PageHeader, Skeleton } from "@/components/ui/page-header";
@@ -21,10 +22,10 @@ export default function ExpensesPage(props: PageProps<"/expenses">) {
       <PageHeader
         title="Expenses"
         actions={
-          <Link href="/add" className={buttonClassName("primary", "sm")}>
+          <QuickAddLink className={buttonClassName("primary", "sm")}>
             <Plus className="size-3.5" aria-hidden />
             Add
-          </Link>
+          </QuickAddLink>
         }
       />
       <Suspense fallback={<ListSkeleton />}>
@@ -49,22 +50,48 @@ async function Expenses({ searchParams }: { searchParams: PageProps<"/expenses">
   return (
     <div className="space-y-5">
       <FilterBar categories={categories.filter((c) => !c.isArchived || filters.categoryId?.includes(c.id))} />
-      {result.total > 0 && (
-        <p className="px-1 text-sm text-zinc-500 dark:text-zinc-400" data-testid="list-summary">
-          <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-50">{formatPaise(result.totalPaise)}</span> across {result.total}{" "}
-          {result.total === 1 ? "expense" : "expenses"}
-          {hasFilters ? " matching your filters" : ""}
-        </p>
-      )}
+      {result.total > 0 && <SummaryStrip total={result.total} totalPaise={result.totalPaise} days={rangeDays(filters.from, filters.to)} filtered={hasFilters} />}
       <ExpenseList result={result} hasFilters={hasFilters} query={query} />
     </div>
+  );
+}
+
+/** Inclusive IST days in the filtered range, or null when there's no start date. */
+function rangeDays(from?: Date, to?: Date): number | null {
+  if (!from) return null;
+  const end = to ?? todayIST();
+  return Math.max(1, Math.round((end.getTime() - from.getTime()) / 86_400_000) + 1);
+}
+
+/** count · total · avg/day (avg per expense when there's no date range). */
+function SummaryStrip({ total, totalPaise, days, filtered }: { total: number; totalPaise: number; days: number | null; filtered: boolean }) {
+  // Whole rupees: an average doesn't need paise, and the strip must fit 390px.
+  const avg = formatPaise(Math.round(totalPaise / (days ?? total) / 100) * 100);
+  const cell = "flex flex-col gap-0.5 px-3 py-2.5 first:pl-4 last:pr-4";
+  return (
+    <dl className="grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-surface shadow-card" data-testid="list-summary" aria-label={filtered ? "Totals for your filters" : "Totals"}>
+      <div className={cell}>
+        <dt className="text-xs text-ink-3">{total === 1 ? "Expense" : "Expenses"}</dt>
+        <dd className="text-base font-semibold tabular-nums text-ink">{total}</dd>
+      </div>
+      <div className={cell}>
+        <dt className="text-xs text-ink-3">Total</dt>
+        <dd className="truncate text-base font-semibold tabular-nums text-ink">{formatPaise(totalPaise)}</dd>
+      </div>
+      <div className={cell}>
+        <dt className="text-xs text-ink-3">{days ? "Avg / day" : "Avg / expense"}</dt>
+        <dd className="truncate text-base font-semibold tabular-nums text-ink">{avg}</dd>
+      </div>
+    </dl>
   );
 }
 
 function ListSkeleton() {
   return (
     <div className="space-y-3">
-      <div className="h-10 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+      <Skeleton className="h-10" />
+      <Skeleton className="h-9" />
+      <Skeleton className="h-[62px]" />
       {Array.from({ length: 6 }).map((_, i) => (
         <Skeleton key={i} className="h-16" />
       ))}

@@ -89,7 +89,13 @@ Radius: 8px controls (`rounded-lg`), 12px cards (`rounded-xl`), 16px dialogs
 | Input / Select / Textarea / MoneyInput | `ui/*`, shared `ui/field-styles.ts` | surface bg, `line` border, 2px primary focus edge (border + 1px ring, no layout shift), 2px danger edge + message on error. |
 | Chip (toggle pill) | `ui/chip.tsx` | selected = `primary/10` fill + 2px primary edge + `aria-pressed`. Ripple on tap. |
 | Dialog / ConfirmDialog | `ui/dialog.tsx` | native `<dialog>`. Mobile: bottom sheet with grab handle, slides up. ≥640px: centred card. 40% backdrop + 4px blur, sticky header, scrolling body, actions stacked on mobile. |
-| EmptyState | `ui/empty-state.tsx` | icon bubble breathes (4px float, 2s loop). |
+| EmptyState | `ui/empty-state.tsx`, `ui/empty-art.tsx` | original line illustration (`art="ledger" | "receipt" | "gauge"`, token strokes) or icon bubble; breathes (the only loop allowed). |
+| Segmented | `ui/segmented.tsx` | radiogroup, one tab stop, arrow keys; 40px tall on touch. |
+| Quick-add sheet | `expenses/quick-add-sheet*.tsx`, `quick-add-link.tsx` | Global bottom sheet mounted in the (app) layout. `QuickAddLink` (FAB, header, empty states) opens it when ready, else is a plain link to `/add` (deep links, no-JS). Save is pinned to the sheet bottom; success = tick pop + haptic squeeze, then the page underneath refreshes. |
+| Swipe row | `expenses/swipe-row.tsx` | Swipe left (touch/pen) for Edit / Delete; keyboard: Tab to the actions (focus slides the row open). Delete is immediate with a 5s Undo toast (soft delete + `POST /api/expenses/[id]/restore`). The detail page keeps its confirm dialog. |
+| Budget ring | `budgets/budget-meter.tsx` (`layout="adaptive"`) | ring on phones, bar from `sm`; one `role="meter"` around both. |
+| Dashboard glance | `dashboard/glance.tsx`, `lib/insights.ts` | Hero (48px figure, pace vs the same point last month, safe-to-spend/day, month progress), insight chips, budgets (max 3), recent (Today/Yesterday/This week), upcoming. All numbers computed from MonthlySummary + budgets; unit-tested. |
+| Trends | `dashboard/trends-panel.tsx` | collapsed by default; one chart chosen by Spend/Category/Mode × Week/Month/FY; table twin. |
 | Bottom nav + FAB | `layout/nav.tsx` | 64px + home-bar inset; 24px icons, 10px labels; active = primary. 56px FAB bounces in once. |
 | Header | `layout/app-header.tsx` | theme toggle, preferences, sign out; respects the notch. |
 | Stat tile | dashboard `Stat` | icon + label, 28px value, delta (arrow icon + text, good/bad by meaning), 5% primary tint. |
@@ -121,7 +127,13 @@ All motion is CSS (`@theme` keyframes in `globals.css`). No animation library.
 | Toast | Sonner | Sonner's built-in slide from top, 3s duration | | `theme/app-toaster.tsx` |
 | Check pop | `animate-check-pop` | 0.5s ease-out | scale 0→1.3→1 | success toast icon |
 | Drift | `animate-drift` | 48s ease-in-out ∞ alternate | translate ≤3px | auth guilloche background |
-| Draw | `animate-draw` (path needs `pathLength="1"` + `stroke-dasharray="1"`) | 0.9s ease-out, 0.25s delay, once | stroke-dashoffset 1→0 | sparkline on the auth ledger preview |
+| Draw | `animate-draw` (path needs `pathLength="1"` + `stroke-dasharray="1"`) | 0.9s ease-out, 0.25s delay, once | stroke-dashoffset 1→0 | one-off line draws |
+| Page in | `animate-page-in` | 0.22s ease-out-soft | fade + 6px rise; ends at `transform: none` | `app/(app)/template.tsx` on every navigation |
+| Type in | `animate-type-in` + `--i` | 0.38s steps(18), +260ms per line | clip-path reveal left→right | auth passbook lines |
+| Stamp | `animate-stamp` + `--i` | 0.4s ease-out-soft | scale 1.6→0.94→1, rotate to −8° | "Hisaab complete" seal |
+| Success pop | `animate-success-pop` | 0.36s ease-back | scale 0.6→1.12→1 | quick-add saved tick (with `navigator.vibrate(12)` where supported) |
+| Nav pill | transform transition | 0.3s ease-out-soft | one pill slides between tab slots | mobile bottom nav |
+| Swipe | transform transition (none while dragging) | 0.2s | row snaps open/closed | expense list |
 
 Easings: `--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1)`, `--ease-back`
 (the bounce curve above).
@@ -143,7 +155,7 @@ screen, brand panel 55% / form 45%.
 |---|---|---|
 | Guilloche | `guilloche.tsx` | Original abstract rosettes + sine band (no currency, emblem or logo). Nested `<use>` keeps it ~1.5 KB; `text-primary` at 9% (light) / 14% (dark). Needs a unique `idPrefix` per instance. Drifts ≤3px over 48s. |
 | ₹ medallion | `rupee-medallion.tsx` | Primary-tinted coin with a dotted "milled" edge; bounces in once, then breathes. |
-| Ledger preview | `ledger-preview.tsx` | Sample month, labelled "Example" + "Sample data"; `role="img"` with a one-line summary for screen readers. Count-up (900ms, width reserved), sparkline draw, staggered rows. Runs once, never loops. |
+| Passbook preview | `passbook-preview.tsx` | "Paisa passbook": ruled stub (date · particulars · debit · balance) with balance b/f, three debits that type in, a closing balance that ticks down (width reserved), and a "Hisaab complete" stamp. Labelled "Example" + "Sample data"; `role="img"` one-line summary. No SVG beyond one icon. Chosen over a gullak (saving isn't the core job) and a UPI-receipt stack ("auto-sorted" would claim a feature Paisa doesn't have). |
 | Password field | `ui/password-input.tsx` | Show/hide (`aria-pressed`, one toggle can drive several fields), Caps Lock warning, optional requirements checklist that mirrors `passwordSchema` (icon + text + sr-only state). |
 
 Custom inline SVG on an auth page is ~4 KB (both guilloche instances, medallion,
@@ -229,6 +241,19 @@ Contrast, measured on the card surface (`#fcfcfb` light / `#1a1a19` dark):
 | Bottom-sheet footer sticky | header sticky, actions at the end of the scrolling body | form actions live inside each form; making them sticky needs a slot API |
 | Framer Motion | CSS keyframes + one Web Animations call | no runtime dependency needed for these effects |
 | Figma file | not produced | needs Figma itself; tokens above map 1:1 to Figma variables |
+
+### Mobile-app redesign deviations
+
+| Brief said | Shipped | Why |
+|---|---|---|
+| Insight example "Food 18% less than Oct" (per category) | spending pace for the whole month on the hero chip, vs the *same point* last month | MonthlySummary has per-category totals only for whole months; comparing a half month with a full one would be untrue |
+| Pace as a chip too | pace only on the hero | chips should add information, not repeat it |
+| "Rent paid" | shown when a Rent expense is logged this month | it's what the data can confirm |
+| Trends with a segmented control on mobile | same on desktop, plus a Spend/Category/Mode switch | one chart at a time everywhere keeps the page short |
+| Swipe actions on every list | expense list only; dashboard rows are tap-to-open | the dashboard is for glancing; edits happen in the list |
+| Undo instead of confirm "where safe" | list delete = undo; detail-page delete keeps its confirm | the detail page is a deliberate destructive action (and the e2e spec asserts it) |
+| Upcoming (rent/EMI/SIP) | shown only when recurring rules exist | there's no UI to create rules yet (API only), so an always-empty card would mislead |
+| Count-up on the hero | value-pop on change only | real money shouldn't count up from ₹0 on every visit |
 
 ### Auth-screen brief deviations
 

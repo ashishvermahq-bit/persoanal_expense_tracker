@@ -17,6 +17,7 @@ import { PAYMENT_METHOD_LABELS } from "@/lib/labels";
 import { formatPaise, toPaise } from "@/lib/money";
 import type { CategoryDTO, ExpenseDTO, PreferencesDTO } from "@/types/dto";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/types/models";
+import { quickAddSheet } from "./quick-add-sheet-store";
 
 const QUICK_PAYMENTS: PaymentMethod[] = ["upi", "cash", "credit_card", "debit_card"];
 
@@ -24,10 +25,13 @@ export function QuickAddForm({
   categories,
   recentCategoryIds,
   preferences,
+  onDone,
 }: {
   categories: CategoryDTO[];
   recentCategoryIds: string[];
   preferences: PreferencesDTO;
+  /** Sheet mode: called after the success animation instead of resetting for another entry. */
+  onDone?: () => void;
 }) {
   const router = useRouter();
   const amountRef = useRef<HTMLInputElement>(null);
@@ -40,6 +44,7 @@ export function QuickAddForm({
   const [showMore, setShowMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState<string | null>(null);
 
   const ordered = useMemo(() => {
     const byId = new Map(categories.map((c) => [c.id, c]));
@@ -83,6 +88,13 @@ export function QuickAddForm({
         description: "Expense saved",
         action: { label: "View", onClick: () => router.push(`/expenses/${created.id}`) },
       });
+      if (onDone) {
+        // Sheet: celebrate briefly, then close; the page underneath refreshes.
+        setSaved(`${formatPaise(created.amountPaise)} · ${cat.name}`);
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(12);
+        setTimeout(onDone, 650);
+        return;
+      }
       setAmount("");
       setNote("");
       setCategoryId(null);
@@ -100,7 +112,16 @@ export function QuickAddForm({
   }
 
   return (
-    <Form onSubmit={onSubmit} noValidate className="space-y-6" data-testid="quick-add-form">
+    <Form onSubmit={onSubmit} noValidate className="relative space-y-6" data-testid="quick-add-form">
+      {saved && (
+        <div role="status" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-surface" data-testid="quick-add-success">
+          <span className="flex size-16 animate-success-pop items-center justify-center rounded-full bg-success/15 text-success-ink">
+            <Check className="size-8 animate-check-pop [animation-delay:120ms]" strokeWidth={2.5} aria-hidden />
+          </span>
+          <p className="text-base font-semibold text-ink">Saved</p>
+          <p className="text-sm tabular-nums text-ink-3">{saved}</p>
+        </div>
+      )}
       <MoneyInput ref={amountRef} label="Amount" size="xl" value={amount} onChange={setAmount} error={errors.amount} autoFocus data-testid="amount" />
 
       <fieldset>
@@ -154,14 +175,29 @@ export function QuickAddForm({
         <Input label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Swiggy dinner, auto to office…" maxLength={200} />
       </div>
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/expenses/new" className="text-sm font-medium text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400">
-          Need tags, receipt or tax section? Add with details →
-        </Link>
-        <Button type="submit" size="lg" loading={loading} className="sm:min-w-40" data-testid="save-expense">
-          Save expense
-        </Button>
-      </div>
+      {onDone ? (
+        <>
+          {/* Close only: refreshing during a navigation can abort it. */}
+          <Link href="/expenses/new" onClick={() => quickAddSheet.close()} className="block text-sm font-medium text-ink-3 underline-offset-4 hover:underline">
+            Need tags, receipt or tax section? Add with details →
+          </Link>
+          {/* Sheet: Save stays pinned at the bottom, so amount → category → save never needs a scroll. */}
+          <div className="sticky bottom-0 z-10 -mx-6 -mb-6 border-t border-line bg-surface/95 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+            <Button type="submit" size="lg" loading={loading} className="w-full" data-testid="save-expense">
+              Save expense
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/expenses/new" className="text-sm font-medium text-ink-3 underline-offset-4 hover:underline">
+            Need tags, receipt or tax section? Add with details →
+          </Link>
+          <Button type="submit" size="lg" loading={loading} className="sm:min-w-40" data-testid="save-expense">
+            Save expense
+          </Button>
+        </div>
+      )}
     </Form>
   );
 }

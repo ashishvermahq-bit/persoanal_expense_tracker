@@ -225,6 +225,14 @@
   --animate-pulse: pulse 1.5s ease-in-out infinite;
   /* Background linework: ≤4px over 48s, alternate. Static under reduced motion. */
   --animate-drift: drift 48s ease-in-out infinite alternate;
+  /* Page change (template.tsx): fade + 6px rise, never blocks input. */
+  --animate-page-in: page-in 0.22s var(--ease-out-soft) both;
+  /* Passbook line "typing" in left→right; stagger with --i (260ms apart). */
+  --animate-type-in: type-in 0.38s steps(18, end) calc(var(--i, 0) * 260ms + 0.2s) both;
+  /* Rubber-stamp landing: drops in, presses, settles. Delay via --i. */
+  --animate-stamp: stamp 0.4s var(--ease-out-soft) calc(var(--i, 0) * 260ms + 0.2s) both;
+  /* Save confirmation: a short haptic-style squeeze. */
+  --animate-success-pop: success-pop 0.36s var(--ease-back) both;
   /* One-off line draw: give the path pathLength="1". */
   --animate-draw: draw 0.9s ease-out 0.25s both;
   --animate-spin: spin 1s linear infinite;
@@ -266,6 +274,24 @@
   @keyframes pulse {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
+  }
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes type-in {
+    from { clip-path: inset(0 100% 0 0); }
+    to { clip-path: inset(0 0 0 0); }
+  }
+  @keyframes stamp {
+    0% { opacity: 0; transform: scale(1.6) rotate(-14deg); }
+    65% { opacity: 1; transform: scale(0.94) rotate(-8deg); }
+    100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+  }
+  @keyframes success-pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    55% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
   }
   @keyframes drift {
     from { transform: translate(0, 0); }

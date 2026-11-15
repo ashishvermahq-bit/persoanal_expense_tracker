@@ -84,6 +84,27 @@ export interface MonthlySummaryDTO {
   lastCalculatedAt: string;
 }
 
+export interface UpcomingDTO {
+  id: string;
+  title: string;
+  kind: "expense" | "income";
+  amountPaise: number;
+  /** ISO instant of the next occurrence. */
+  nextRunAt: string;
+  /** Whole IST days from today (0 = today). */
+  dueInDays: number;
+}
+
+/** One period of the dashboard "Trends" panel. */
+export interface TrendPeriodDTO {
+  key: "week" | "month" | "fy";
+  label: string;
+  totalPaise: number;
+  series: { key: string; label: string; totalPaise: number }[];
+  byCategory: { key: string; name: string; totalPaise: number; count: number }[];
+  byPaymentMethod: { key: string; name: string; totalPaise: number; count: number }[];
+}
+
 export interface BudgetDTO {
   id: string;
   categoryId: string;

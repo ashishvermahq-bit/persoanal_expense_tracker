@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { IndianRupee, Plus, Settings } from "lucide-react";
+import { QuickAddLink } from "@/components/expenses/quick-add-link";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle";
 import { buttonClassName } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -30,10 +31,10 @@ export async function AppHeader() {
         <div className="flex items-center gap-1">
           {/* Wrapper carries the visibility: cn() doesn't merge `hidden` with the button's own inline-flex. Phones use the FAB. */}
           <span className="mr-1 hidden sm:block">
-            <Link href="/add" className={buttonClassName("primary", "sm")}>
+            <QuickAddLink className={buttonClassName("primary", "sm")}>
               <Plus className="size-3.5" aria-hidden />
               Add expense
-            </Link>
+            </QuickAddLink>
           </span>
           <span className="mr-1 hidden text-sm text-ink-3 md:inline" data-testid="user-name">
             {user.name}

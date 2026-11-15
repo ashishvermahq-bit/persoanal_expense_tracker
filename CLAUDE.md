@@ -32,6 +32,10 @@ npm run test:e2e:prod # same suite against `next build` + `next start`: stable t
 - **Touch targets**: interactive elements get `pointer-coarse:min-h-11` (44px). Fields use `fieldClassName()` (16px text on phones to stop iOS zoom).
 - **Motion**: use the `animate-*` tokens; lists stagger with `animate-list-in` + `style={{ "--i": index }}`; add `data-ripple` for tap ripple. Everything must still work under `prefers-reduced-motion`.
 - `cn()` only joins strings (no tailwind-merge) — don't pass conflicting utilities and expect the later one to win.
+- **Previously visited routes stay mounted, hidden, in `<Activity>`** (cacheComponents). Local state can outlive a navigation (derive from the URL, see `filter-bar.tsx`), and e2e locators after a client-side navigation should use `.filter({ visible: true })`.
+- **"Add expense" entry points use `QuickAddLink`** (opens the global quick-add sheet, falls back to `/add`). After auth/session changes use a full navigation, never `router.replace` + `router.refresh` (the refresh can abort the navigation).
+- Expense list `to` filter is **inclusive** (last day picked). Deletes from lists are undoable via `POST /api/expenses/[id]/restore`.
+- `public/sw.js` caches **static assets only**; never cache HTML/RSC/API (signed-in money data on shared phones).
 
 ## Auth & API conventions
 

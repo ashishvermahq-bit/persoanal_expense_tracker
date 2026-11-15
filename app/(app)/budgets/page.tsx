@@ -15,7 +15,7 @@ async function BudgetContent() {
   ]);
 
   return (
-    <Card>
+    <Card className="p-4 sm:p-6">
       <BudgetManager categories={categories} budgets={budgets} />
     </Card>
   );

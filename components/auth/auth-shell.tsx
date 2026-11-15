@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { FileText, IndianRupee, Lock, Zap } from "lucide-react";
 import { Guilloche } from "./guilloche";
-import { LedgerPreview } from "./ledger-preview";
+import { PassbookPreview } from "./passbook-preview";
 import { RupeeMedallion } from "./rupee-medallion";
 
 // Only claims the product actually backs today.
@@ -28,7 +28,7 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
             <RupeeMedallion size="lg" />
             <p className="mt-6 text-4xl font-semibold tracking-tight text-ink xl:text-5xl">Har rupaye ka hisaab.</p>
             <p className="mt-2 text-lg text-ink-2">Every rupee, accounted for.</p>
-            <LedgerPreview className="mt-8 max-w-sm" />
+            <PassbookPreview className="mt-8 max-w-sm" />
           </div>
 
           <ul className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-ink-2">

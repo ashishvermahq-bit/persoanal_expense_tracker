@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: { default: "Paisa — Expense Tracker", template: "%s · Paisa" },
   description: "Track where your money goes each month. Built for India: UPI, cards, cash, FY reports and tax tags.",
   manifest: "/manifest.json",
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-touch-icon.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

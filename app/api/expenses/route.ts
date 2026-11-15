@@ -3,7 +3,7 @@ import { searchParamsToObject } from "@/lib/query";
 import { createExpense, listExpenses } from "@/lib/services/expenses";
 import { createExpenseSchema, expenseFiltersSchema } from "@/lib/validation/expense";
 import { getBudgetForCategory } from "@/lib/services/budgets";
-import { currentYearMonthIST } from "@/lib/dates";
+import { yearMonthOf } from "@/lib/dates";
 
 export const GET = withAuth(async (request, _ctx, { userId }) => {
   const url = new URL(request.url);
@@ -16,7 +16,8 @@ export const POST = withAuth(async (request, _ctx, { userId }) => {
   const expense = await createExpense(userId, input);
 
   // Check for budget warning
-  const { year, month } = currentYearMonthIST();
+  // The month the expense is dated in (a backdated entry counts against that month's budget).
+  const { year, month } = yearMonthOf(input.date);
   const budget = await getBudgetForCategory(userId.toString(), input.categoryId, year, month);
 
   type BudgetWarningType = { status: "warning" | "over"; categoryId: string; categoryName: string; budgetPaise: number; spendPaise: number; message: string };

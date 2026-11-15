@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Paperclip, ReceiptIndianRupee } from "lucide-react";
-import { CategoryIcon } from "@/components/categories/category-icon";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDateLong, istParts } from "@/lib/dates";
-import { PAYMENT_METHOD_LABELS, TAX_SECTION_SHORT, UPI_APP_LABELS } from "@/lib/labels";
 import { formatPaise } from "@/lib/money";
 import type { ExpenseDTO, Paged } from "@/types/dto";
 import { buttonClassName } from "@/components/ui/button";
+import { ExpenseRowBody } from "./expense-row";
+import { QuickAddLink } from "./quick-add-link";
+import { SwipeExpenseRow } from "./swipe-row";
 
 function dayKey(iso: string) {
   const { year, month, day } = istParts(new Date(iso));
@@ -17,14 +18,12 @@ export function ExpenseList({ result, hasFilters, query }: { result: Paged<Expen
   if (result.items.length === 0) {
     return (
       <EmptyState
-        icon={ReceiptIndianRupee}
+        art="receipt"
         title={hasFilters ? "No expenses match" : "No expenses yet"}
         description={hasFilters ? "Try widening the date range or clearing filters." : "Add your first expense — it takes three taps."}
         action={
           !hasFilters && (
-            <Link href="/add" className={buttonClassName("primary", "md")}>
-              Add an expense
-            </Link>
+            <QuickAddLink className={buttonClassName("primary", "md")}>Add an expense</QuickAddLink>
           )
         }
       />
@@ -54,38 +53,20 @@ export function ExpenseList({ result, hasFilters, query }: { result: Paged<Expen
 
   let idx = 0;
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {groups.map((g) => (
         <section key={g.key} aria-label={g.label}>
-          <header className="mb-2 flex items-baseline justify-between px-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-3">
+          {/* Sticky under the app header (56px + notch). */}
+          <header className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-[5] -mx-1 mb-2 flex items-baseline justify-between bg-plane/90 px-2 py-1.5 text-xs font-medium uppercase tracking-[0.05em] text-ink-3 backdrop-blur">
             <span>{g.label}</span>
             <span className="tabular-nums">{formatPaise(g.totalPaise)}</span>
           </header>
           <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface shadow-card">
             {g.items.map((e) => (
               <li key={e.id} className="animate-list-in" style={{ "--i": idx++ } as React.CSSProperties}>
-                <Link href={`/expenses/${e.id}`} data-ripple className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-raised focus-visible:bg-raised focus-visible:outline-none" data-testid="expense-row">
-                  <CategoryIcon icon={e.category?.icon} color={e.category?.color} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">
-                      {e.description || e.merchant || e.category?.name || "Expense"}
-                    </p>
-                    <p className="truncate text-xs text-ink-3">
-                      {[e.category?.name, e.merchant && e.description ? e.merchant : null, e.paymentMethod === "upi" && e.upiApp ? UPI_APP_LABELS[e.upiApp] : PAYMENT_METHOD_LABELS[e.paymentMethod]]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {e.receiptUrl && <Paperclip className="size-3.5 text-muted" aria-label="Has receipt" />}
-                    {e.taxSection !== "none" && (
-                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-micro font-semibold text-success-ink">
-                        {TAX_SECTION_SHORT[e.taxSection]}
-                      </span>
-                    )}
-                    <span className="text-sm font-semibold tabular-nums text-ink">{formatPaise(e.amountPaise)}</span>
-                  </div>
-                </Link>
+                <SwipeExpenseRow expense={e}>
+                  <ExpenseRowBody expense={e} />
+                </SwipeExpenseRow>
               </li>
             ))}
           </ul>
