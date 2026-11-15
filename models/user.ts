@@ -20,6 +20,8 @@ const userSchema = new Schema<IUser>(
     failedLoginCount: { type: Number, default: 0, min: 0 },
     lockedUntil: { type: Date, default: null },
     onboardedAt: { type: Date, default: null },
+    // Bumped on password change/reset: every session token carrying an older value is revoked.
+    sessionVersion: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

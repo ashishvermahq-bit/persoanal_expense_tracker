@@ -21,7 +21,7 @@ describe("session tokens", () => {
     expect(await verifySessionToken(token.slice(0, -2) + "xx")).toBeNull();
     expect(await verifySessionToken(undefined)).toBeNull();
     expect(await verifySessionToken("")).toBeNull();
-    const old = await signSessionToken(userId, new Date(Date.now() - (SESSION_TTL_SECONDS + 120) * 1000));
+    const old = await signSessionToken(userId, 0, new Date(Date.now() - (SESSION_TTL_SECONDS + 120) * 1000));
     expect(await verifySessionToken(old)).toBeNull();
   });
 

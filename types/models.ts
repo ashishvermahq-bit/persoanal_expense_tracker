@@ -80,6 +80,7 @@ export interface IUser extends Timestamps {
   failedLoginCount: number;
   lockedUntil: Date | null;
   onboardedAt: Date | null;
+  sessionVersion: number;
 }
 
 export interface IUserPreferences extends Timestamps {

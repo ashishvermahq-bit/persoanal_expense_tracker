@@ -2,13 +2,10 @@ import { ApiError, ok, parseBody, withApi } from "@/lib/api";
 import { bootstrapUser } from "@/lib/auth/bootstrap";
 import { createSessionCookie } from "@/lib/auth/cookies";
 import { dummyHash, verifyPassword } from "@/lib/auth/password";
-import { AUTH_RATE_LIMIT, clientIp, hitRateLimit } from "@/lib/auth/rate-limit";
+import { AUTH_RATE_LIMIT, LOGIN_FAILURE_LIMIT, clientIp, hitRateLimit, peekRateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
 import { connectDB } from "@/lib/db";
 import { loginSchema } from "@/lib/validation/auth";
 import { User } from "@/models/user";
-
-const MAX_FAILED_LOGINS = 5;
-const LOCK_MINUTES = 15;
 
 export const POST = withApi(async (request) => {
   await connectDB();
@@ -29,37 +26,32 @@ export const POST = withApi(async (request) => {
     });
   }
 
+  // Failed attempts are counted per email whether or not an account exists, and checked
+  // before the lookup, so "locked" looks identical for registered and unknown addresses.
+  const failKey = `login:fail:${input.email}`;
+  const failures = await peekRateLimit(failKey, LOGIN_FAILURE_LIMIT);
+  if (!failures.allowed) {
+    const mins = Math.ceil(failures.retryAfterSeconds / 60);
+    throw new ApiError("LOCKED", `Too many failed attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`, undefined, {
+      "Retry-After": String(failures.retryAfterSeconds),
+    });
+  }
+
   const user = await User.findOne({ email: input.email }).select("+passwordHash");
-  const invalid = new ApiError("UNAUTHORIZED", "Incorrect email or password");
+  // Unknown email: burn the same bcrypt time as a real check so timing doesn't leak existence.
+  const valid = user ? await verifyPassword(input.password, user.passwordHash) : (await verifyPassword(input.password, await dummyHash()), false);
 
-  if (!user) {
-    // Burn the same bcrypt time as a real check so timing doesn't leak existence.
-    await verifyPassword(input.password, await dummyHash());
-    throw invalid;
-  }
-
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    const mins = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60_000);
-    throw new ApiError("LOCKED", `Account temporarily locked. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`);
-  }
-
-  const valid = await verifyPassword(input.password, user.passwordHash);
-  if (!valid) {
-    const failed = user.failedLoginCount + 1;
-    await User.updateOne(
-      { _id: user._id },
-      failed >= MAX_FAILED_LOGINS
-        ? { $set: { failedLoginCount: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) } }
-        : { $set: { failedLoginCount: failed } }
-    );
-    throw invalid;
+  if (!user || !valid) {
+    await hitRateLimit(failKey, LOGIN_FAILURE_LIMIT);
+    throw new ApiError("UNAUTHORIZED", "Incorrect email or password");
   }
 
   await Promise.all([
+    resetRateLimit(failKey, LOGIN_FAILURE_LIMIT),
     User.updateOne({ _id: user._id }, { $set: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() } }),
     bootstrapUser(user._id),
   ]);
-  await createSessionCookie(user._id.toHexString());
+  await createSessionCookie(user._id.toHexString(), user.sessionVersion ?? 0);
 
   return ok({ user: { id: user._id.toHexString(), name: user.name, email: user.email } });
 });

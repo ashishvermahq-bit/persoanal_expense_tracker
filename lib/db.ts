@@ -1,10 +1,5 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI: string = process.env.MONGODB_URI ?? "";
-
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI is not defined in environment variables");
-}
 
 // Cached connection lives on the global object to survive hot-reloads in dev
 // and to be reused across serverless invocations in production.
@@ -24,11 +19,24 @@ export async function connectDB(): Promise<typeof mongoose> {
   if (cache.conn) return cache.conn;
 
   if (!cache.promise) {
+    // Checked at boot too (instrumentation.ts); here so a missing value fails clearly, not at import.
+    const MONGODB_URI = process.env.MONGODB_URI;
+    if (!MONGODB_URI) throw new Error("MONGODB_URI is not defined in environment variables");
     cache.promise = mongoose.connect(MONGODB_URI, {
       bufferCommands: false,
+      // Serverless: many short-lived instances each hold a pool, so keep it small
+      // (Atlas M0 allows 500 connections in total) and fail fast when the DB is down.
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10_000,
     });
   }
 
-  cache.conn = await cache.promise;
+  try {
+    cache.conn = await cache.promise;
+  } catch (err) {
+    // Don't cache a failed connect: the next request should retry, not rethrow forever.
+    cache.promise = null;
+    throw err;
+  }
   return cache.conn;
 }

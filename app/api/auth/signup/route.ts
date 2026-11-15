@@ -42,7 +42,7 @@ export const POST = withApi(async (request) => {
   }
 
   await bootstrapUser(user._id);
-  await createSessionCookie(user._id.toHexString());
+  await createSessionCookie(user._id.toHexString(), 0);
 
   return ok({ user: { id: user._id.toHexString(), name: user.name, email: user.email } }, { status: 201 });
 });

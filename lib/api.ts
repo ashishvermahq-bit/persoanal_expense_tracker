@@ -1,9 +1,10 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 import { Types } from "mongoose";
 import type { ZodType } from "zod";
-import { connectDB } from "@/lib/db";
-import { readSession } from "@/lib/auth/cookies";
+import { verifiedSession } from "@/lib/auth/verified-session";
+import { redactForLog } from "@/lib/log";
 import { fieldErrors } from "@/lib/validation/fields";
 
 /**
@@ -85,8 +86,11 @@ export function withApi<C = unknown>(handler: Handler<C>): Handler<C> {
     try {
       return await handler(request, ctx);
     } catch (err) {
+      // Next's own control-flow errors (e.g. cookies() during build-time prerender) must propagate.
+      unstable_rethrow(err);
       if (err instanceof ApiError) return fail(err);
-      console.error("[api] unhandled error", err);
+      // Mongo/Mongoose errors can quote the offending document (e.g. a duplicate email): redact.
+      console.error("[api] unhandled error", redactForLog(err));
       return fail(new ApiError("INTERNAL", "Something went wrong. Please try again."));
     }
   };
@@ -98,12 +102,20 @@ export interface AuthContext {
 
 type AuthedHandler<C> = (request: Request, ctx: C, auth: AuthContext) => Promise<Response>;
 
-/** Wrap a route handler that requires a logged-in user; connects to the DB first. */
+/**
+ * Wrap a route handler that requires a logged-in user. Verifies the cookie AND that
+ * the session hasn't been revoked (connects to the DB as a side effect).
+ */
 export function withAuth<C = unknown>(handler: AuthedHandler<C>): Handler<C> {
   return withApi<C>(async (request, ctx) => {
-    const session = await readSession();
+    const session = await verifiedSession();
     if (!session) throw new ApiError("UNAUTHORIZED", "Please sign in");
-    await connectDB();
-    return handler(request, ctx, { userId: new Types.ObjectId(session.sub) });
+    return handler(request, ctx, { userId: session.userId });
   });
+}
+
+/** A route `[id]` param as an ObjectId, or a 404 (never a 500 from a malformed id). */
+export function idParam(id: string, notFound = "Not found"): Types.ObjectId {
+  if (!/^[0-9a-f]{24}$/i.test(id)) throw new ApiError("NOT_FOUND", notFound);
+  return new Types.ObjectId(id);
 }
