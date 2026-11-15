@@ -1,7 +1,8 @@
 "use client";
 
+import { Form } from "@/components/ui/form";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,9 @@ import { ApiClientError, api } from "@/lib/client";
 import { loginSchema } from "@/lib/validation/auth";
 import { fieldErrors } from "@/lib/validation/fields";
 
-export function LoginForm({ nextPath }: { nextPath?: string }) {
+export function LoginForm() {
   const router = useRouter();
+  const nextPath = useSearchParams().get("next") ?? undefined;
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5" data-testid="login-form">
+    <Form onSubmit={onSubmit} noValidate className="space-y-5" data-testid="login-form">
       <Input label="Email" name="email" type="email" autoComplete="email" inputMode="email" required placeholder="you@example.com" error={errors.email} />
       <Input
         label="Password"
@@ -68,7 +70,7 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
       <Button type="submit" loading={loading} className="mt-1 w-full">
         Sign in
       </Button>
-    </form>
+    </Form>
   );
 }
 

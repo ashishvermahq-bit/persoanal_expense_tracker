@@ -1,5 +1,6 @@
 "use client";
 
+import { Form } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -43,7 +44,7 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5" data-testid="signup-form">
+    <Form onSubmit={onSubmit} noValidate className="space-y-5" data-testid="signup-form">
       <Input label="Full name" name="name" autoComplete="name" required placeholder="Priya Sharma" error={errors.name} />
       <Input label="Email" name="email" type="email" autoComplete="email" inputMode="email" required placeholder="you@example.com" error={errors.email} />
       <Input
@@ -65,6 +66,6 @@ export function SignupForm() {
       <Button type="submit" loading={loading} className="mt-1 w-full">
         Create account
       </Button>
-    </form>
+    </Form>
   );
 }

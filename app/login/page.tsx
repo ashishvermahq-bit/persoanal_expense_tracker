@@ -6,7 +6,7 @@ import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default function LoginPage(props: PageProps<"/login">) {
+export default function LoginPage() {
   return (
     <AuthShell
       title="Welcome back"
@@ -20,15 +20,22 @@ export default function LoginPage(props: PageProps<"/login">) {
         </>
       }
     >
-      <Suspense fallback={<LoginForm />}>
-        <LoginFormWithNext searchParams={props.searchParams} />
+      {/* LoginForm reads ?next= via useSearchParams, which needs a Suspense boundary.
+          The fallback is a skeleton, never a second form: a form that gets swapped
+          out would lose anything the user had already typed. */}
+      <Suspense fallback={<FormSkeleton />}>
+        <LoginForm />
       </Suspense>
     </AuthShell>
   );
 }
 
-async function LoginFormWithNext({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
-  const sp = await searchParams;
-  const next = typeof sp.next === "string" ? sp.next : undefined;
-  return <LoginForm nextPath={next} />;
+function FormSkeleton() {
+  return (
+    <div className="space-y-5" aria-hidden>
+      <div className="h-[66px] animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+      <div className="h-[66px] animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+      <div className="h-10 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700" />
+    </div>
+  );
 }

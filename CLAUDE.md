@@ -28,6 +28,8 @@ npm run test:e2e  # Playwright e2e in tests/e2e
 - `proxy.ts` is an *optimistic* gate (signature/expiry only). Every `/api/*` route handler must still use `withAuth` from `lib/api.ts`, which verifies the cookie, connects to Mongo and hands you `{ userId }`.
 - API envelope: `{ data }` or `{ error: { code, message, fields? } }`. Throw `ApiError` inside handlers; validate bodies with `parseBody(request, zodSchema)`. Client components call routes through `api()` in `lib/client.ts`, which throws `ApiClientError` with `.fields` for inline form errors.
 - Zod v4: put `.trim().toLowerCase()` *before* format checks via `.pipe(z.email())`; map issues to fields with `fieldErrors()` (first issue per field wins).
+- **Services, not inline queries.** Business logic lives in `lib/services/*` (`expenses`, `income`, `categories`, `preferences`) and returns plain DTOs from `types/dto.ts`. Route handlers under `app/api/*` and Server Components both call the same service functions; pages get the user via `requireUserId()` (`lib/services/context.ts`). Any expense/income write must go through the service so `recomputeForDates()` keeps `MonthlySummary` fresh.
+- Zod schemas in `lib/validation/*` are shared by client forms and API routes; they accept either integer `amountPaise` or a human-typed rupee `amount` string and normalise to paise.
 - Pages that read cookies / DB must render that part inside `<Suspense>` (cacheComponents). Interactive e2e tests live in `tests/e2e` and boot their own in-memory Mongo via `tests/e2e/server.mjs`; they are slow on first run because `next dev` compiles routes on demand.
 
 ## This is Next.js 16 — read the bundled docs before writing code

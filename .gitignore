@@ -47,3 +47,7 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+
+# user uploads (local storage adapter)
+/public/uploads/
+/.next-e2e/
