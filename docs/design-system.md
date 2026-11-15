@@ -172,7 +172,7 @@ screen, brand panel 55% / form 45%.
 
 | Piece | File | Notes |
 |---|---|---|
-| Guilloche | `guilloche.tsx` | Original abstract rosettes + sine band (no currency, emblem or logo). Nested `<use>` keeps it ~1.5 KB; `text-primary` at 9% (light) / 14% (dark). Needs a unique `idPrefix` per instance. Drifts ≤3px over 48s. |
+| Guilloche | `guilloche.tsx` | Original abstract rosettes + sine band (no currency, emblem or logo). Nested `<use>` keeps it ~1.5 KB; `text-primary` at 9% (light) / 14% (dark). Needs a unique `idPrefix` per instance. Drifts ≤3px over 48s. Main rosette: top right in the phone strip, centred in the desktop brand panel (`lg:` CSS transform to viewBox 400,400, which `slice` keeps at the panel centre at any width); text over it stays ≥4.5:1. |
 | ₹ medallion | `rupee-medallion.tsx` | Primary-tinted coin with a dotted "milled" edge; bounces in once, then breathes. |
 | Ledger strip (phones) | `ledger-preview.tsx` → `LedgerStrip` | one line under the form: "Example · ₹24,350 spent this month · Kirana 82% used" (warning icon + label); never pushes the form down. |
 | Ledger preview | `ledger-preview.tsx` | "Example: your month at a glance" + "Sample data"; `role="img"` one-line summary. ₹0 → ₹24,350 count-up (~900ms, width reserved by a pseudo-element), 2px sparkline draw-in in the danger token (`var(--danger)`, a spend line; decorative), rows Rent / Kirana / UPI payments with thin bars in their hues (`animate-list-in` stagger), Kirana budget meter at "82% used". Runs once, never loops. (Briefly replaced by a "passbook" card; restored to follow the auth brief exactly.) |
