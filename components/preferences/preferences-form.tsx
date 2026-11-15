@@ -9,7 +9,8 @@ import { Select } from "@/components/ui/select";
 import { ApiClientError, api } from "@/lib/client";
 import { PAYMENT_METHOD_LABELS } from "@/lib/labels";
 import type { PreferencesDTO } from "@/types/dto";
-import { PAYMENT_METHODS, FY_STARTS, THEMES, LOCALES } from "@/types/models";
+import { PAYMENT_METHODS, FY_STARTS, LOCALES } from "@/types/models";
+import { ThemeSegmented } from "@/components/theme/theme-toggle";
 
 const TIMEZONES = [
   { value: "Asia/Kolkata", label: "Asia/Kolkata (IST)" },
@@ -21,12 +22,6 @@ const TIMEZONES = [
 const FY_START_LABELS = {
   april: "April (FY 2025-26 = Apr 2025 – Mar 2026)",
   january: "January (Calendar year)",
-};
-
-const THEME_LABELS = {
-  system: "System",
-  light: "Light",
-  dark: "Dark",
 };
 
 const LOCALE_LABELS = {
@@ -75,13 +70,11 @@ export function PreferencesForm({ preferences }: { preferences: PreferencesDTO }
   return (
     <Form onSubmit={onSubmit} noValidate className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Select label="Theme" value={theme} onChange={(e) => setTheme(e.target.value as "system" | "light" | "dark")}>
-          {THEMES.map((t) => (
-            <option key={t} value={t}>
-              {THEME_LABELS[t]}
-            </option>
-          ))}
-        </Select>
+        <div className="space-y-1.5">
+          <span className="block text-sm font-medium text-ink-2">Theme</span>
+          <ThemeSegmented onChange={setTheme} />
+          <p className="text-xs text-ink-3">Applies instantly on this device and is saved to your account.</p>
+        </div>
 
         <Select label="Timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
           {TIMEZONES.map((tz) => (

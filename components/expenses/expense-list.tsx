@@ -52,37 +52,38 @@ export function ExpenseList({ result, hasFilters, query }: { result: Paged<Expen
     return `/expenses${s ? `?${s}` : ""}`;
   };
 
+  let idx = 0;
   return (
     <div className="space-y-6">
       {groups.map((g) => (
         <section key={g.key} aria-label={g.label}>
-          <header className="mb-2 flex items-baseline justify-between px-1 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <header className="mb-2 flex items-baseline justify-between px-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-3">
             <span>{g.label}</span>
             <span className="tabular-nums">{formatPaise(g.totalPaise)}</span>
           </header>
-          <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+          <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface shadow-card">
             {g.items.map((e) => (
-              <li key={e.id}>
-                <Link href={`/expenses/${e.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60" data-testid="expense-row">
+              <li key={e.id} className="animate-list-in" style={{ "--i": idx++ } as React.CSSProperties}>
+                <Link href={`/expenses/${e.id}`} data-ripple className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-raised focus-visible:bg-raised focus-visible:outline-none" data-testid="expense-row">
                   <CategoryIcon icon={e.category?.icon} color={e.category?.color} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                    <p className="truncate text-sm font-medium text-ink">
                       {e.description || e.merchant || e.category?.name || "Expense"}
                     </p>
-                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="truncate text-xs text-ink-3">
                       {[e.category?.name, e.merchant && e.description ? e.merchant : null, e.paymentMethod === "upi" && e.upiApp ? UPI_APP_LABELS[e.upiApp] : PAYMENT_METHOD_LABELS[e.paymentMethod]]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {e.receiptUrl && <Paperclip className="size-3.5 text-zinc-400" aria-label="Has receipt" />}
+                    {e.receiptUrl && <Paperclip className="size-3.5 text-muted" aria-label="Has receipt" />}
                     {e.taxSection !== "none" && (
-                      <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-micro font-semibold text-success-ink">
                         {TAX_SECTION_SHORT[e.taxSection]}
                       </span>
                     )}
-                    <span className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">{formatPaise(e.amountPaise)}</span>
+                    <span className="text-sm font-semibold tabular-nums text-ink">{formatPaise(e.amountPaise)}</span>
                   </div>
                 </Link>
               </li>
@@ -93,7 +94,7 @@ export function ExpenseList({ result, hasFilters, query }: { result: Paged<Expen
 
       {result.totalPages > 1 && (
         <nav aria-label="Pagination" className="flex items-center justify-between text-sm">
-          <span className="text-zinc-500 dark:text-zinc-400">
+          <span className="text-ink-3">
             Page {result.page} of {result.totalPages} · {result.total} expenses
           </span>
           <div className="flex gap-2">
@@ -111,10 +112,10 @@ export function ExpenseList({ result, hasFilters, query }: { result: Paged<Expen
 }
 
 function PageButton({ href, disabled, label, children }: { href: string; disabled: boolean; label: string; children: React.ReactNode }) {
-  const cls = "inline-flex size-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300";
+  const cls = "inline-flex size-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-2 pointer-coarse:size-11";
   if (disabled) return <span aria-disabled className={`${cls} opacity-40`}>{children}</span>;
   return (
-    <Link href={href} aria-label={label} className={`${cls} hover:bg-zinc-50 dark:hover:bg-zinc-800`}>
+    <Link href={href} aria-label={label} className={`${cls} hover:bg-raised`}>
       {children}
     </Link>
   );

@@ -3,7 +3,9 @@
 import { Form } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Gauge, Plus, Trash2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SectionLabel } from "@/components/ui/page-header";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
@@ -108,7 +110,7 @@ export function BudgetManager({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Budget</h2>
+        <SectionLabel>Monthly limits</SectionLabel>
         <Button size="sm" onClick={openNew} disabled={unbudgetedCategories.length === 0} data-testid="new-budget">
           <Plus className="size-3.5" aria-hidden />
           Add budget
@@ -116,36 +118,28 @@ export function BudgetManager({
       </div>
 
       {budgets.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-          No budgets set. Add one to track your spending against limits.
-        </p>
+        <EmptyState icon={Gauge} title="No budgets yet" description="Set a monthly limit for a category. You'll get a heads-up at 80% and when you go over." />
       ) : (
-        <div className="space-y-2">
-          {budgets.map((b) => (
-            <div key={b.id} className="group flex items-center gap-2">
-              <div className="flex-1">
-                <BudgetMeter
-                  categoryName={b.categoryName}
-                  status={b.status}
-                  spendPaise={b.spendPaise}
-                  budgetPaise={b.amountPaise}
-                />
+        <ul className="divide-y divide-line">
+          {budgets.map((b, i) => (
+            <li key={b.id} className="flex animate-list-in items-center gap-2" style={{ "--i": i } as React.CSSProperties}>
+              <div className="min-w-0 flex-1">
+                <BudgetMeter categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
               </div>
-              <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setToDelete(b)}
-                  aria-label="Delete budget"
-                  className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                </Button>
-              </div>
-            </div>
+              {/* Always visible: hover-only controls are unreachable on touch screens. */}
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setToDelete(b)}
+                aria-label={`Delete ${b.categoryName} budget`}
+                className="px-2 text-ink-3 hover:text-danger-ink"
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </Button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       <Dialog open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Set budget" : "Edit budget"}>

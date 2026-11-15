@@ -230,7 +230,7 @@ export function ExpenseForm({
 
       <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-6 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
         {editing ? (
-          <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" data-testid="delete-expense">
+          <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)} className="text-danger-ink hover:bg-danger/10" data-testid="delete-expense">
             <Trash2 className="size-4" aria-hidden />
             Delete
           </Button>

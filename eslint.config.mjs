@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // e2e runner's isolated dev build (see tests/e2e/server.mjs)
     ".next-e2e/**",
+    ".next-e2e-prod/**",
     "test-results/**",
     "playwright-report/**",
   ]),

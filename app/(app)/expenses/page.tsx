@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { ExpenseList } from "@/components/expenses/expense-list";
 import { FilterBar } from "@/components/expenses/filter-bar";
 import { buttonClassName } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, Skeleton } from "@/components/ui/page-header";
 import { formatPaise } from "@/lib/money";
 import { searchParamsToObject } from "@/lib/query";
 import { listCategories } from "@/lib/services/categories";
@@ -66,7 +66,7 @@ function ListSkeleton() {
     <div className="space-y-3">
       <div className="h-10 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-16 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />
+        <Skeleton key={i} className="h-16" />
       ))}
     </div>
   );

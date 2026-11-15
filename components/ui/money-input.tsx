@@ -2,6 +2,7 @@
 
 import { forwardRef, useId, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
+import { errorClassName, fieldClassName, labelClassName } from "./field-styles";
 
 export interface MoneyInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "onChange" | "size"> {
   label: string;
@@ -22,17 +23,11 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function
   const xl = size === "xl";
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className={cn("block font-medium text-zinc-700 dark:text-zinc-300", xl ? "sr-only" : "text-sm")}>
+      <label htmlFor={id} className={cn(labelClassName, xl && "sr-only")}>
         {label}
       </label>
       <div className="relative">
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-zinc-400",
-            xl ? "text-3xl" : "text-sm"
-          )}
-        >
+        <span aria-hidden className={cn("pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-medium text-muted", xl ? "text-3xl" : "text-base sm:text-sm")}>
           ₹
         </span>
         <input
@@ -50,19 +45,14 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function
             onChange(rest.length ? `${whole}.${rest.join("").slice(0, 2)}` : whole ?? "");
           }}
           aria-invalid={error ? true : undefined}
-          className={cn(
-            "block w-full rounded-lg border bg-zinc-50 py-2.5 text-zinc-900 tabular-nums outline-none transition-colors focus:bg-white focus:ring-2 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:bg-zinc-800",
-            xl ? "h-16 pl-10 pr-4 text-4xl font-semibold tracking-tight" : "pl-8 pr-3.5 text-sm",
-            error
-              ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
-              : "border-zinc-200 focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:focus:border-zinc-400 dark:focus:ring-zinc-400/10",
-            className
-          )}
+          aria-describedby={error ? `${id}-error` : undefined}
+          // md: pl-8 overrides px-3's left side (longhand sorts after shorthand in Tailwind 4).
+          className={fieldClassName(!!error, cn("tabular-nums", !xl && "pl-8", className), xl ? "xl" : "md")}
           {...props}
         />
       </div>
       {error && (
-        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+        <p id={`${id}-error`} role="alert" className={errorClassName}>
           {error}
         </p>
       )}

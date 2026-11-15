@@ -3,6 +3,8 @@ import { Types } from "mongoose";
 import { RecurringRule } from "@/models/recurring-rule";
 import { createExpense } from "./expenses";
 import { createIncome } from "./income";
+import type { CreateExpenseInput } from "@/lib/validation/expense";
+import type { CreateIncomeInput } from "@/lib/validation/income";
 import type { IRecurringRule } from "@/types/models";
 
 export async function listRecurringRules(userId: Types.ObjectId | string): Promise<IRecurringRule[]> {
@@ -31,25 +33,31 @@ export async function generateRecurringEntries(userId: Types.ObjectId | string):
 
   for (const rule of dueRules) {
     try {
+      // Typed as the service inputs plus recurringRuleId, which createX persists
+      // (it spreads its input) so generated rows stay linked to their rule.
       if (rule.kind === "expense") {
-        await createExpense(userObjectId, {
+        if (!rule.categoryId) throw new Error("Expense rule has no category");
+        const input: CreateExpenseInput & { recurringRuleId: Types.ObjectId } = {
           amountPaise: rule.amountPaise,
-          categoryId: rule.categoryId?.toString() || "",
-          date: rule.nextRunAt.toISOString().split("T")[0],
+          categoryId: rule.categoryId.toString(),
+          date: rule.nextRunAt,
           paymentMethod: rule.paymentMethod,
-          upiApp: rule.upiApp,
+          upiApp: rule.upiApp ?? null,
           taxSection: rule.taxSection,
           description: rule.title,
-          recurringRuleId: rule._id.toString(),
-        } as Record<string, unknown>);
+          tags: [],
+          recurringRuleId: rule._id,
+        };
+        await createExpense(userObjectId, input);
       } else {
-        await createIncome(userObjectId, {
+        const input: CreateIncomeInput & { recurringRuleId: Types.ObjectId } = {
           amountPaise: rule.amountPaise,
-          source: rule.incomeSource || "other",
-          date: rule.nextRunAt.toISOString().split("T")[0],
+          source: rule.incomeSource ?? "other",
+          date: rule.nextRunAt,
           description: rule.title,
-          recurringRuleId: rule._id.toString(),
-        } as Record<string, unknown>);
+          recurringRuleId: rule._id,
+        };
+        await createIncome(userObjectId, input);
       }
       generated++;
     } catch (err) {

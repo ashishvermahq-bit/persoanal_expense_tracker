@@ -43,6 +43,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except Next internals and static assets.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)"],
+  // Everything except Next internals and static assets. The service worker and
+  // manifest must be public: browsers refuse to register a SW served via a redirect.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw\\.js$|manifest\\.json$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)"],
 };

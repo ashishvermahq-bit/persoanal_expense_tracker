@@ -248,7 +248,7 @@ function IconButton({ label, onClick, danger, children }: { label: string; onCli
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={`rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${danger ? "hover:text-red-600" : "hover:text-zinc-900 dark:hover:text-zinc-50"}`}
+      className={`rounded-lg p-2 text-ink-3 transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:p-3 ${danger ? "hover:text-danger-ink" : "hover:text-ink"}`}
     >
       {children}
     </button>

@@ -11,7 +11,8 @@ npm run start     # Start production server
 npm run lint      # Run ESLint (not next lint — that was removed in Next.js 16)
 npm run typecheck # tsc --noEmit (run `npx next typegen` first if LayoutProps/PageProps are missing)
 npm test          # Vitest unit tests in tests/unit (model tests spin up mongodb-memory-server)
-npm run test:e2e  # Playwright e2e in tests/e2e
+npm run test:e2e  # Playwright e2e in tests/e2e against `next dev` (on-demand compiles can make it flaky on slow machines)
+npm run test:e2e:prod # same suite against `next build` + `next start`: stable timings, use this before committing
 ```
 
 ## Domain conventions (do not break these)
@@ -21,6 +22,15 @@ npm run test:e2e  # Playwright e2e in tests/e2e
 - **Enums live in `types/models.ts`** (`PAYMENT_METHODS`, `TAX_SECTIONS`, …) and are imported by Mongoose schemas, Zod validators and UI alike. Add new values there only.
 - **Every query is scoped by `userId`** and soft-deleted rows (`deletedAt !== null`) are excluded. System categories have `userId: null, isSystem: true` and are seeded by `lib/seed/categories.ts`.
 - `MonthlySummary` is a cache; recompute it after any expense/income write for the affected month rather than editing it directly.
+
+## UI theme conventions (see docs/design-system.md)
+
+- **No hex in components.** Use semantic tokens from `app/globals.css` (`bg-surface`, `text-ink`/`ink-2`/`ink-3`, `border-line`, `bg-primary-solid text-on-primary`, `text-success-ink`, `bg-danger/10`, `var(--series-1)` in charts). Fills use the hue token (`bg-warning`); text uses the `*-ink` token (`text-warning-ink`) — the raw hues fail AA as text.
+- **Theme** = `<html data-theme>` set pre-paint by `THEME_BOOT_SCRIPT` (`lib/theme.ts`). `dark:` is a custom variant keyed on it; change themes only via `setTheme()`.
+- **Status is never colour-only**: icon + text label (+ `aria-*`). Charts get a `ChartTable` twin.
+- **Touch targets**: interactive elements get `pointer-coarse:min-h-11` (44px). Fields use `fieldClassName()` (16px text on phones to stop iOS zoom).
+- **Motion**: use the `animate-*` tokens; lists stagger with `animate-list-in` + `style={{ "--i": index }}`; add `data-ripple` for tap ripple. Everything must still work under `prefers-reduced-motion`.
+- `cn()` only joins strings (no tailwind-merge) — don't pass conflicting utilities and expect the later one to win.
 
 ## Auth & API conventions
 

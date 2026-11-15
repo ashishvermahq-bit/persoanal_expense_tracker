@@ -39,8 +39,8 @@ export function IncomeRow({ income }: { income: IncomeDTO }) {
           {INCOME_SOURCE_LABELS[income.source]} · {formatDateLong(new Date(income.date))}
         </p>
       </div>
-      <span className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{formatPaise(income.amountPaise, { signed: true })}</span>
-      <Button variant="ghost" size="sm" onClick={() => setConfirm(true)} aria-label="Delete income entry" className="-mr-2 px-2 text-zinc-400 hover:text-red-600">
+      <span className="text-sm font-semibold tabular-nums text-success-ink">{formatPaise(income.amountPaise, { signed: true })}</span>
+      <Button variant="ghost" size="sm" onClick={() => setConfirm(true)} aria-label="Delete income entry" className="-mr-2 px-2 text-ink-3 hover:text-danger-ink">
         <Trash2 className="size-4" aria-hidden />
       </Button>
       <ConfirmDialog

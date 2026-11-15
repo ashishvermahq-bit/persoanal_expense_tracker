@@ -1,0 +1,211 @@
+# Paisa design system
+
+Theme, components and motion for Paisa. **The code is the source of truth**:
+tokens live in `app/globals.css`, primitives in `components/ui/*`, theme logic in
+`lib/theme.ts` + `components/theme/*`. This document explains them.
+
+Principles: trust and clarity (never gamified), speed (≤3-tap quick add,
+instant feedback), quiet delight (motion rewards, never distracts),
+Indian-first warmth, dark mode designed first.
+
+---
+
+## 1. Tokens (Tailwind 4)
+
+Tailwind 4 has no `tailwind.config.js`; tokens are declared in CSS with
+`@theme`. Semantic colours are CSS variables that swap per theme, exposed as
+utilities: `bg-surface`, `text-ink-3`, `border-line`, `bg-primary/10`, …
+
+### Colour roles
+
+| Token | Use | Light | Dark |
+|---|---|---|---|
+| `plane` | page background | `#f9f9f7` | `#0d0d0d` |
+| `surface` | cards, sheets, inputs | `#fcfcfb` | `#1a1a19` |
+| `raised` | hover wash, meter tracks, table heads | `#f0efec` | `#232322` |
+| `ink` | primary text | `#0b0b0b` | `#f0efec` |
+| `ink-2` | secondary text, labels | `#52514e` | `#c3c2b7` |
+| `ink-3` | muted text (hints, meta) | `#6b6a65` | `#a3a29a` |
+| `muted` | decorative only: icons, axes, placeholders | `#898781` | `#898781` |
+| `line` | hairline borders | `rgba(11,11,11,.1)` | `rgba(255,255,255,.1)` |
+| `primary` | brand hue: marks, focus ring, active icons | `#2a78d6` | `#3987e5` |
+| `primary-solid` (+`-hover`, `-active`) | filled buttons, FAB | `#256abf` / `#286fcb` / `#1c5cab` | `#3987e5` / `#5598e7` / `#2f7fdf` |
+| `on-primary` | text on `primary-solid` | `#fcfcfb` | `#0b0b0b` |
+| `primary-ink` | links, active nav text | `#256abf` | `#5598e7` |
+| `success` / `success-ink` | income, savings, good deltas | `#0ca30c` / `#006300` | `#0ca30c` / `#0ca30c` |
+| `warning` / `warning-ink` | ≥80% of budget | `#fab219` / `#8a5a00` | `#fab219` / `#fab219` |
+| `danger` / `danger-ink` | ≥100% of budget, errors | `#e34948` / `#c02f2f` | `#e66767` / `#e66767` |
+| `danger-solid` / `on-danger` | destructive buttons | `#c93a39` / `#fcfcfb` | `#e66767` / `#0b0b0b` |
+| `series-1…8` | chart series (validated order) | blue, orange, aqua, yellow, magenta, green, violet, red | dark steps of the same |
+
+**Fill vs ink.** Each status hue has a *fill* (bars, icons, dots) and an
+*ink* (text). The spec's hues are kept for fills; text uses a darker (light
+mode) step of the same hue so it passes WCAG AA. See §6 for the numbers.
+
+**Neutral scale.** `zinc-50…950` is remapped to the warm neutrals above, so
+existing `zinc-*` utilities follow the theme. New code should prefer the
+semantic tokens. `white` is remapped to `#fcfcfb` (the light surface).
+
+**Rules**
+- Never hard-code hex in components. Use a token, or add one in `globals.css`.
+- Status colour is never the only signal: pair it with an icon and a text label.
+- Text never wears a series/status *fill* colour; use the `*-ink` token or `ink`.
+- Category colours are entity colours stored per category (DB), not tokens.
+
+### Type
+
+System UI stack only (`system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans"`).
+No web fonts, so there's nothing to download and no layout shift.
+
+| Role | Class | Size / weight |
+|---|---|---|
+| Hero number | `text-hero font-semibold` | 48px, proportional figures |
+| Stat value | `text-stat font-semibold` | 28px, proportional figures |
+| H1 (page / dialog title) | `text-2xl font-semibold` | 24px |
+| H2 section label | `<SectionLabel>` | 14px, uppercase, `tracking-[0.05em]`, `ink-3` |
+| Body | `text-sm` | 14px / 1.5 |
+| Small | `text-xs text-ink-3` | 12px |
+| Micro (nav labels, tags) | `text-micro` | 10px |
+| Amounts in lists/tables | `tabular-nums` | aligned columns only |
+
+Large standalone numbers use proportional figures; `tabular-nums` only where
+numbers align vertically.
+
+### Shape & elevation
+
+Radius: 8px controls (`rounded-lg`), 12px cards (`rounded-xl`), 16px dialogs
+(`rounded-2xl`), pills (`rounded-full`). Shadows: `shadow-card`
+(`0 1px 3px` at 12% light / 30% dark) and `shadow-sheet` for bottom sheets.
+
+---
+
+## 2. Components
+
+| Component | File | Notes |
+|---|---|---|
+| Button (`primary`, `secondary`, `ghost`, `danger`) | `ui/button.tsx` | 8px radius, semibold. Hover: 1px lift + card shadow; press: `scale(.96)` 100ms; loading: spinner + `aria-busy` + wait cursor. `buttonClassName()` styles links. |
+| Card | `ui/page-header.tsx` → `Card` | surface, hairline border, 12px radius, card shadow. Callers set padding (`p-4`). |
+| SectionLabel, Skeleton | `ui/page-header.tsx` | H2 style; skeleton pulses 0.6→1 over 1.5s. |
+| Input / Select / Textarea / MoneyInput | `ui/*`, shared `ui/field-styles.ts` | surface bg, `line` border, 2px primary focus edge (border + 1px ring, no layout shift), 2px danger edge + message on error. |
+| Chip (toggle pill) | `ui/chip.tsx` | selected = `primary/10` fill + 2px primary edge + `aria-pressed`. Ripple on tap. |
+| Dialog / ConfirmDialog | `ui/dialog.tsx` | native `<dialog>`. Mobile: bottom sheet with grab handle, slides up. ≥640px: centred card. 40% backdrop + 4px blur, sticky header, scrolling body, actions stacked on mobile. |
+| EmptyState | `ui/empty-state.tsx` | icon bubble breathes (4px float, 2s loop). |
+| Bottom nav + FAB | `layout/nav.tsx` | 64px + home-bar inset; 24px icons, 10px labels; active = primary. 56px FAB bounces in once. |
+| Header | `layout/app-header.tsx` | theme toggle, preferences, sign out; respects the notch. |
+| Stat tile | dashboard `Stat` | icon + label, 28px value, delta (arrow icon + text, good/bad by meaning), 5% primary tint. |
+| Budget meter | `budgets/budget-meter.tsx` | 6px bar, 3px radius, same-hue track; status icon + label (“On track”, “85% used”, “Over by ₹1,200”); `role="meter"`. |
+| Charts | `dashboard/*` | ranked bars (one hue, ≤24px, 4px data-end), line with crosshair; every chart has a “Show as table” twin. |
+| Theme controls | `theme/theme-toggle.tsx` | `ThemeSegmented` (System / Light / Dark) and the header `ThemeToggleButton`. |
+
+---
+
+## 3. Motion spec
+
+All motion is CSS (`@theme` keyframes in `globals.css`). No animation library.
+
+| Name | Class | Timing | Effect | Where |
+|---|---|---|---|---|
+| Page fade | `animate-fade-in` | 0.2s ease-out | opacity 0→1 | `app/(app)/template.tsx` (replays on every navigation) |
+| Slide up | `animate-slide-up` | 0.3s ease-out | translateY(24px)→0 + fade | dialogs / bottom sheets, auth card |
+| Scale in | `animate-scale-in` | 0.2s ease-out | scale .98→1 + fade | available for cards/popovers |
+| Button press | `active:scale-[0.96]` | 0.1s ease-out | press + darker fill | all buttons |
+| Ripple | `data-ripple` attribute | 0.6s ease-out | radial pulse from tap point, 18%→0 | chips, list rows, nav items (`theme/motion.tsx`, one delegated listener) |
+| Bounce in | `animate-bounce-in` | 0.4s `cubic-bezier(.68,-.55,.27,1.55)` | scale 0→1.2→1 | FAB on first load, auth logo |
+| Budget fill | width transition | 0.8s ease-out | fill animates on *update* only (static on first render) | budget meters |
+| Threshold flash | Web Animations API | 0.3s ease-out | brightness/saturation pulse when status worsens | budget meters |
+| Value pop | `animate-value-pop` | 0.3s ease-out | scale 1.05→1 with green flash, on value change | stat tiles (`dashboard/value-pop.tsx`) |
+| List entry | `animate-list-in` + `style={{"--i": n}}` | 0.2s ease-out, +20ms per item (cap 12) | translateY(8px)→0 + fade | expense list, budgets, top categories |
+| Breathe | `animate-breathe` | 2s ease-in-out ∞ | translateY 0→4px→0 | empty-state icon |
+| Spinner | `animate-spin` | 1s linear ∞ | 360° | button loading |
+| Skeleton | `animate-pulse` | 1.5s ease-in-out ∞ | opacity 0.6↔1 | Suspense fallbacks |
+| Toast | Sonner | Sonner's built-in slide from top, 3s duration | | `theme/app-toaster.tsx` |
+| Check pop | `animate-check-pop` | 0.5s ease-out | scale 0→1.3→1 | success toast icon |
+
+Easings: `--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1)`, `--ease-back`
+(the bounce curve above).
+
+**Reduced motion.** Under `prefers-reduced-motion: reduce`, every animation and
+transition resolves instantly to its end state, the ripple is removed, and the
+threshold flash is skipped in JS. Nothing that carries meaning is
+animation-only.
+
+---
+
+## 4. Dark mode
+
+- Designed dark-first: dark steps are chosen for the dark surface, not inverted.
+- `<html data-theme="light|dark">` is set by an inline script in `<head>`
+  (`THEME_BOOT_SCRIPT`, `lib/theme.ts`) **before first paint**, so there's no flash.
+- Choice = `system | light | dark`. Stored per device in `localStorage`
+  (`paisa-theme`) and saved to `preferences.theme` on the server. "System"
+  follows OS changes live.
+- `dark:` utilities use a custom variant: explicit `data-theme` wins; with no
+  attribute (JS off) the OS preference applies.
+- Toasts and charts follow the resolved theme (charts read CSS variables).
+
+Limitation: a new device starts on "System" until the user picks a theme
+there. The saved server value is not yet pushed down on login.
+
+---
+
+## 5. iOS safe areas
+
+`viewport-fit=cover` is set in `app/layout.tsx`. With the
+`black-translucent` status bar (installed PWA), content runs under the notch
+unless padded.
+
+| Utility | CSS | Applied to |
+|---|---|---|
+| `pt-safe` | `padding-top: env(safe-area-inset-top)` | sticky header |
+| `pb-safe` | `padding-bottom: env(safe-area-inset-bottom)` | bottom nav |
+| `px-safe` | left/right insets | header, bottom nav (landscape) |
+| `pb-[calc(6rem+env(safe-area-inset-bottom))]` | | `<main>`, so content clears nav + FAB |
+| `pb-[max(1.5rem,env(safe-area-inset-bottom))]` | | bottom-sheet body |
+
+Toasts offset by `env(safe-area-inset-top)`. Don't combine `px-safe` with
+`px-*` on the same element; the physical and logical properties fight.
+
+---
+
+## 6. Accessibility checklist (WCAG 2.1 AA)
+
+Contrast, measured on the card surface (`#fcfcfb` light / `#1a1a19` dark):
+
+| Pair | Light | Dark |
+|---|---|---|
+| ink / ink-2 / ink-3 | 19.2 / 7.7 / 5.3 | 15.2 / 9.7 / 6.8 |
+| primary-ink, success-ink, warning-ink, danger-ink | 5.3, 7.4, 5.8, 5.6 | 5.8, 5.2, 9.5, 5.4 |
+| Primary button text (rest / hover / active) | 5.3 / 4.8 / 6.5 | 5.4 / 6.6 / 4.9 |
+| Danger button text | 4.9 | 6.1 |
+| Focus ring (`primary`) vs page (non-text, ≥3) | 4.2 | 5.3 |
+
+- [x] Text ≥ 4.5:1; UI parts and focus indicators ≥ 3:1 (table above).
+- [x] Touch targets ≥ 44px on touch screens (`pointer-coarse:min-h-11` on buttons, chips, fields, icon buttons); compact sizes kept for mouse.
+- [x] Colour never alone: budget status = icon + label + `data-status`; deltas = arrow + text; selected chips = edge + `aria-pressed`.
+- [x] Visible focus on every interactive element (`focus-visible` ring, offset against the page).
+- [x] `prefers-reduced-motion` honoured globally.
+- [x] Inputs: labelled, `aria-invalid` + `aria-describedby` to the error/hint, `role="alert"` on errors; 16px text on small screens (stops iOS zoom-on-focus).
+- [x] Dialogs: native `<dialog>` (focus trap, Esc), titled via `aria-labelledby`.
+- [x] Meters: `role="meter"` with `aria-valuetext` (“85% of budget used. 85% used”).
+- [x] Charts: `role="img"` + description, legends for multi-series, and a table view for every chart.
+- [x] Dark mode keeps AA (table above); no pure black.
+- [ ] Manual screen-reader pass (VoiceOver iOS, TalkBack) — not yet done.
+- [ ] Hindi (`hi-IN`) strings: check line-height and truncation once translations land.
+
+---
+
+## 7. Deviations from the original brief (and why)
+
+| Brief said | Shipped | Why |
+|---|---|---|
+| Primary button `#2a78d6` with white text | `#256abf` rest (brand `#2a78d6` stays for marks/focus) | white on `#2a78d6` is 4.42:1, just under AA |
+| Dark primary button with white text | near-black text on `#3987e5` | white is 3.6:1; near-black is 5.4:1 |
+| Muted text `#898781` in both modes | `#6b6a65` light, `#a3a29a` dark for text; `#898781` kept for icons/axes | `#898781` on light is 3.5:1 |
+| Warning / danger hues as text | darker `*-ink` steps in light mode | `#fab219` on light is 1.8:1; `#e34948` is 3.9:1 |
+| White text on danger buttons | `#c93a39` light; near-black on `#e66767` dark | AA for button labels |
+| Inputs 14px | 16px on phones, 14px from `sm` | iOS Safari zooms the page on focus below 16px |
+| Picker chips 12px | 14px | they're the primary tap targets in quick add |
+| Category donut | ranked horizontal bars, one hue | easier to compare parts; colour-by-rank repaints entities |
+| Bottom-sheet footer sticky | header sticky, actions at the end of the scrolling body | form actions live inside each form; making them sticky needs a slot API |
+| Framer Motion | CSS keyframes + one Web Animations call | no runtime dependency needed for these effects |
+| Figma file | not produced | needs Figma itself; tokens above map 1:1 to Figma variables |

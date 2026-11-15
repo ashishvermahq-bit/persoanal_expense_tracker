@@ -29,33 +29,16 @@ export const GET = withAuth(async (_request, _ctx, { userId }) => {
 export const POST = withAuth(async (request, _ctx, { userId }) => {
   const { Types } = await import("mongoose");
   const input = await parseBody(request, createRecurringRuleSchema);
-  interface CreateRecurringInput {
-    kind: string;
-    title: string;
-    amountPaise: number;
-    categoryId: string | null | undefined;
-    incomeSource: string | null | undefined;
-    paymentMethod: string;
-    upiApp: string | null;
-    taxSection: string;
-    frequency: string;
-    dayOfMonth: number;
-    startsAt: Date;
-    endsAt: Date | null;
-    nextRunAt: Date;
-    lastGeneratedAt: null;
-    isActive: boolean;
-    remindDaysBefore: number;
-  }
   const rule = await createRecurringRule(userId, {
     ...input,
     categoryId: input.categoryId ? new Types.ObjectId(input.categoryId) : null,
-    upiApp: input.upiApp || null,
+    incomeSource: input.incomeSource ?? null,
+    upiApp: input.upiApp ?? null,
     startsAt: new Date(input.startsAt),
     endsAt: input.endsAt ? new Date(input.endsAt) : null,
     nextRunAt: new Date(input.startsAt),
     lastGeneratedAt: null,
-  } as CreateRecurringInput);
+  });
   return ok(rule, { status: 201 });
 });
 

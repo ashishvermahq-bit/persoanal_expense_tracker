@@ -5,8 +5,8 @@ import { test as setup } from "@playwright/test";
  * before the real specs run keeps per-test timing predictable on slow machines
  * and stops cold compiles from masquerading as test failures.
  */
-const PAGES = ["/login", "/signup", "/dashboard", "/add", "/expenses", "/expenses/new", "/income", "/categories"];
-const APIS = ["/api/auth/me", "/api/expenses", "/api/income", "/api/categories", "/api/summary/2026/1"];
+const PAGES = ["/login", "/signup", "/dashboard", "/add", "/expenses", "/expenses/new", "/income", "/categories", "/budgets", "/preferences"];
+const APIS = ["/api/auth/me", "/api/expenses", "/api/income", "/api/categories", "/api/summary/2026/1", "/api/budgets", "/api/preferences"];
 
 setup("warm up dev server routes", async ({ request }) => {
   setup.setTimeout(10 * 60_000);

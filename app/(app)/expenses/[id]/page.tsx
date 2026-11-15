@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ExpenseForm } from "@/components/expenses/expense-form";
-import { Card, PageHeader } from "@/components/ui/page-header";
+import { Card, PageHeader, Skeleton } from "@/components/ui/page-header";
 import { ApiError } from "@/lib/api";
 import { formatDateLong } from "@/lib/dates";
 import { formatPaise } from "@/lib/money";
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Edit expense" };
 export default function EditExpensePage(props: PageProps<"/expenses/[id]">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />}>
+      <Suspense fallback={<Skeleton className="h-96" />}>
         <Editor params={props.params} />
       </Suspense>
     </div>

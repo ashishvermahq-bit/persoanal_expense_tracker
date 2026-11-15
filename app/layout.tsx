@@ -1,11 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
+import { AppToaster } from "@/components/theme/app-toaster";
+import { MotionRoot } from "@/components/theme/motion";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import { PWAInit } from "./pwa-init";
 import "./globals.css";
-
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: { default: "Paisa — Expense Tracker", template: "%s · Paisa" },
@@ -20,8 +18,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f9f9f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -30,11 +28,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+    // data-theme is set by the boot script before hydration, hence suppressHydrationWarning.
+    <html lang="en-IN" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
+      <body className="flex min-h-full flex-col">
         <PWAInit />
+        <MotionRoot />
         {children}
-        <Toaster position="top-center" richColors closeButton />
+        <AppToaster />
       </body>
     </html>
   );

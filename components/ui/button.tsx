@@ -13,11 +13,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-zinc-900 text-white hover:bg-zinc-700 focus-visible:ring-zinc-900 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-50",
-  secondary:
-    "border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50 focus-visible:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800",
-  ghost: "text-zinc-700 hover:bg-zinc-100 focus-visible:ring-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
-  danger: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",
+    "bg-primary-solid text-on-primary hover:bg-primary-solid-hover hover:-translate-y-px hover:shadow-card active:translate-y-0 active:bg-primary-solid-active active:shadow-none",
+  secondary: "border border-line bg-transparent text-ink hover:bg-ink/5 active:bg-ink/10",
+  ghost: "text-ink-2 hover:bg-ink/5 hover:text-ink active:bg-ink/10",
+  // Darkens on hover (lightening the red would drop white text below 4.5:1).
+  danger: "bg-danger-solid text-on-danger hover:-translate-y-px hover:shadow-card hover:brightness-90 active:translate-y-0 active:brightness-[0.85]",
 };
 
 const sizes: Record<Size, string> = {
@@ -29,7 +29,12 @@ const sizes: Record<Size, string> = {
 /** Button styling for non-button elements (e.g. a Next <Link> that looks like a button). */
 export function buttonClassName(variant: Variant = "primary", size: Size = "md", className?: string): string {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-offset-zinc-950",
+    // 44px minimum target on touch screens; desktop keeps the compact sizes.
+    "inline-flex select-none items-center justify-center gap-2 rounded-lg font-semibold pointer-coarse:min-h-11",
+    // Tailwind 4 scale-*/translate-* use the individual `scale`/`translate` properties.
+    "transition-[background-color,color,box-shadow,translate,scale,filter] duration-100 ease-out active:scale-[0.96]",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-plane",
+    "disabled:pointer-events-none disabled:opacity-60 aria-busy:cursor-wait",
     variants[variant],
     sizes[size],
     className
@@ -48,7 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       className={buttonClassName(variant, size, className)}
       {...props}
     >
-      {loading && <Loader2 className="size-4 animate-spin" aria-hidden />}
+      {loading && <Loader2 className="size-4 animate-spin" strokeWidth={2} aria-hidden />}
       {children}
     </button>
   );

@@ -24,9 +24,10 @@ export function LogoutButton() {
   }
 
   return (
-    <Button variant="secondary" size="sm" onClick={logout} loading={loading} data-testid="logout">
-      <LogOut className="size-3.5" aria-hidden />
-      Sign out
+    // Icon-only on phones (the header is tight); the label is still announced.
+    <Button variant="secondary" size="sm" onClick={logout} loading={loading} aria-label="Sign out" title="Sign out" data-testid="logout" className="px-2.5 sm:px-3">
+      {!loading && <LogOut className="size-3.5" aria-hidden />}
+      <span className="hidden sm:inline">Sign out</span>
     </Button>
   );
 }

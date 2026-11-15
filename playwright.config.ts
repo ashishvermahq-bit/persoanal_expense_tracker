@@ -32,7 +32,8 @@ export default defineConfig({
     command: `node tests/e2e/server.mjs ${PORT}`,
     url: `http://localhost:${PORT}/login`,
     reuseExistingServer: !process.env.CI,
-    timeout: 240_000,
+    // prod mode runs `next build` first.
+    timeout: process.env.E2E_MODE === "prod" ? 600_000 : 240_000,
     stdout: "pipe",
     stderr: "pipe",
   },

@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, Plus } from "lucide-react";
-import { CategoryIcon } from "@/components/categories/category-icon";
-import { Card } from "@/components/ui/page-header";
-import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
-import { CategoryBreakdownChart } from "@/components/dashboard/category-breakdown-chart";
-import { PaymentMethodChart } from "@/components/dashboard/payment-method-chart";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, PiggyBank, Plus, ReceiptIndianRupee, Wallet, type LucideIcon } from "lucide-react";
 import { BudgetMeter } from "@/components/budgets/budget-meter";
+import { CategoryIcon } from "@/components/categories/category-icon";
+import { CategoryBreakdownChart } from "@/components/dashboard/category-breakdown-chart";
+import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
+import { PaymentMethodChart } from "@/components/dashboard/payment-method-chart";
+import { ValuePop } from "@/components/dashboard/value-pop";
+import { buttonClassName } from "@/components/ui/button";
+import { Card, SectionLabel, Skeleton } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { currentYearMonthIST, formatDateLong, formatMonthLabel, previousMonth, todayIST } from "@/lib/dates";
+import { currentYearMonthIST, daysInMonth, formatDateLong, formatMonthLabel, istParts, previousMonth, todayIST } from "@/lib/dates";
 import { formatPaise } from "@/lib/money";
-import { listCategories } from "@/lib/services/categories";
 import { listBudgetsWithSpend } from "@/lib/services/budgets";
+import { listCategories } from "@/lib/services/categories";
 import { requireUserId } from "@/lib/services/context";
 import { toSummaryDTO } from "@/lib/services/serialize";
 import { getOrComputeSummary } from "@/lib/summary/recompute";
@@ -22,16 +24,16 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
-      <Suspense fallback={<div className="h-24 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />}>
+      <Suspense fallback={<Skeleton className="h-16" />}>
         <Greeting />
       </Suspense>
-      <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />}>
+      <Suspense fallback={<Skeleton className="h-36" />}>
         <StatCards />
       </Suspense>
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />}>
+      <Suspense fallback={<Skeleton className="h-96" />}>
         <ChartSection />
       </Suspense>
-      <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />}>
+      <Suspense fallback={<Skeleton className="h-40" />}>
         <BudgetOverview />
       </Suspense>
     </div>
@@ -43,12 +45,12 @@ async function Greeting() {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{formatDateLong(todayIST())}</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50" data-testid="greeting">
+        <p className="text-sm text-ink-3">{formatDateLong(todayIST())}</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink" data-testid="greeting">
           Namaste, {user?.name.split(" ")[0]}
         </h1>
       </div>
-      <Link href="/add" className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200">
+      <Link href="/add" className={buttonClassName("primary", "md")}>
         <Plus className="size-4" aria-hidden />
         Add expense
       </Link>
@@ -56,32 +58,92 @@ async function Greeting() {
   );
 }
 
-function Stat({ label, value, sub, tone = "default", testId }: { label: string; value: string; sub?: string; tone?: "default" | "good" | "bad" | "muted"; testId?: string }) {
-  const color =
-    tone === "good" ? "text-emerald-700 dark:text-emerald-400" : tone === "bad" ? "text-red-600 dark:text-red-400" : tone === "muted" ? "text-zinc-400" : "text-zinc-900 dark:text-zinc-50";
+type Delta = { text: string; direction: "up" | "down"; good: boolean };
+
+/** Stat tile: icon + label, 28px proportional value, optional delta vs a named period. */
+function Stat({
+  label,
+  value,
+  rawValue,
+  icon: Icon,
+  sub,
+  delta,
+  tone = "default",
+  testId,
+}: {
+  label: string;
+  value: string;
+  rawValue: number;
+  icon: LucideIcon;
+  sub?: string;
+  delta?: Delta | null;
+  tone?: "default" | "good" | "bad" | "muted";
+  testId?: string;
+}) {
+  const color = tone === "good" ? "text-success-ink" : tone === "bad" ? "text-danger-ink" : tone === "muted" ? "text-ink-3" : "text-ink";
+  const DeltaIcon = delta?.direction === "up" ? ArrowUpRight : ArrowDownRight;
   return (
-    <Card className="p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${color}`} data-testid={testId}>
-        {value}
+    <Card className="bg-primary/5 p-4">
+      <div className="flex items-center gap-2">
+        <span className="flex size-8 items-center justify-center rounded-lg bg-surface text-primary shadow-card">
+          <Icon className="size-4" aria-hidden />
+        </span>
+        <p className="text-sm font-medium text-ink-2">{label}</p>
+      </div>
+      {/* Proportional figures: tabular-nums looks loose at display sizes. */}
+      <p className={`mt-3 text-stat font-semibold tracking-tight ${color}`} data-testid={testId}>
+        <ValuePop value={rawValue}>{value}</ValuePop>
       </p>
-      {sub && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{sub}</p>}
+      <div className="mt-1 flex min-h-4 flex-wrap items-center justify-between gap-x-2 text-xs">
+        <span className="text-ink-3">{sub}</span>
+        {delta && (
+          <span className={`inline-flex items-center gap-0.5 font-medium ${delta.good ? "text-success-ink" : "text-danger-ink"}`}>
+            <DeltaIcon className="size-3.5" aria-hidden />
+            {delta.text}
+          </span>
+        )}
+      </div>
     </Card>
   );
+}
+
+/** Spending delta: more spend is bad, less is good. */
+function spendDelta(change: number | null, prevLabel: string): Delta | null {
+  if (change === null || !Number.isFinite(change)) return null;
+  const pct = Math.round(Math.abs(change) * 100);
+  if (pct === 0) return null;
+  return { text: `${pct}% vs ${prevLabel}`, direction: change > 0 ? "up" : "down", good: change < 0 };
 }
 
 async function StatCards() {
   const userId = await requireUserId();
   const ym = currentYearMonthIST();
   const summary = await getOrComputeSummary(userId, ym).then(toSummaryDTO);
+  const prevLabel = formatMonthLabel(previousMonth(ym)).split(" ")[0] ?? "last month";
 
   return (
     <div className="grid gap-4 sm:grid-cols-3">
-      <Stat label={`Spent in ${formatMonthLabel(ym)}`} value={formatPaise(summary.totalExpensePaise)} sub={`${summary.expenseCount} ${summary.expenseCount === 1 ? "expense" : "expenses"}`} testId="month-spent" />
-      <Stat label="Income" value={formatPaise(summary.totalIncomePaise)} sub={summary.totalIncomePaise ? undefined : "Add income to see savings"} />
+      <Stat
+        label={`Spent in ${formatMonthLabel(ym)}`}
+        icon={ReceiptIndianRupee}
+        value={formatPaise(summary.totalExpensePaise)}
+        rawValue={summary.totalExpensePaise}
+        sub={`${summary.expenseCount} ${summary.expenseCount === 1 ? "expense" : "expenses"}`}
+        delta={spendDelta(summary.changeFromPreviousMonth, prevLabel)}
+        testId="month-spent"
+      />
+      <Stat
+        label="Income"
+        icon={Wallet}
+        value={formatPaise(summary.totalIncomePaise)}
+        rawValue={summary.totalIncomePaise}
+        sub={summary.totalIncomePaise ? undefined : "Add income to see savings"}
+      />
       <Stat
         label="Saved"
+        icon={PiggyBank}
         value={formatPaise(summary.savingsPaise)}
+        rawValue={summary.savingsPaise}
         sub={summary.savingsRate !== null ? `${Math.round(summary.savingsRate * 100)}% of income` : undefined}
         tone={summary.totalIncomePaise === 0 ? "muted" : summary.savingsPaise >= 0 ? "good" : "bad"}
       />
@@ -101,58 +163,59 @@ async function ChartSection() {
 
   const catById = new Map(categories.map((c) => [c.id, c]));
   const topByCategory = current.byCategory.slice(0, 4);
+  const empty = <p className="text-sm text-ink-3">Nothing yet this month.</p>;
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Daily trend</h2>
-        <DailyTrendChart currentMonth={current} previousMonth={prev} />
+      <Card className="p-4 sm:p-6">
+        <SectionLabel className="mb-4">Daily spend</SectionLabel>
+        <DailyTrendChart
+          currentMonth={current}
+          previousMonth={prev}
+          throughDay={istParts(todayIST()).day}
+          currentDays={daysInMonth(ym.year, ym.month)}
+          previousDays={daysInMonth(prevYm.year, prevYm.month)}
+          currentLabel={formatMonthLabel(ym)}
+          previousLabel={formatMonthLabel(prevYm)}
+        />
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-6">
-          <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Spending by category</h2>
-          {current.byCategory.length === 0 ? (
-            <p className="text-sm text-zinc-500">No expenses yet</p>
-          ) : (
-            <CategoryBreakdownChart summary={current} />
-          )}
+        <Card className="p-4 sm:p-6">
+          <SectionLabel className="mb-4">By category</SectionLabel>
+          {current.byCategory.length === 0 ? empty : <CategoryBreakdownChart summary={current} />}
         </Card>
-
-        <Card className="p-6">
-          <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Payment methods</h2>
-          {current.byPaymentMethod.length === 0 ? (
-            <p className="text-sm text-zinc-500">No expenses yet</p>
-          ) : (
-            <PaymentMethodChart summary={current} />
-          )}
+        <Card className="p-4 sm:p-6">
+          <SectionLabel className="mb-4">By payment mode</SectionLabel>
+          {current.byPaymentMethod.length === 0 ? empty : <PaymentMethodChart summary={current} />}
         </Card>
       </div>
 
-      <Card className="p-5">
+      <Card className="p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Top categories this month</h2>
-          <Link href="/expenses" className="inline-flex items-center gap-1 text-xs font-medium text-zinc-600 hover:underline dark:text-zinc-400">
+          <SectionLabel>Top categories</SectionLabel>
+          <Link href="/expenses" className="inline-flex items-center gap-1 text-xs font-medium text-primary-ink hover:underline">
             All expenses <ArrowRight className="size-3" aria-hidden />
           </Link>
         </div>
         {topByCategory.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing yet this month.</p>
+          empty
         ) : (
           <ul className="space-y-2.5">
-            {topByCategory.map((c) => {
+            {topByCategory.map((c, i) => {
               const cat = catById.get(c.categoryId);
               const pct = current.totalExpensePaise ? Math.round((c.totalPaise / current.totalExpensePaise) * 100) : 0;
               return (
-                <li key={c.categoryId} className="flex items-center gap-3">
+                <li key={c.categoryId} className="flex animate-list-in items-center gap-3" style={{ "--i": i } as React.CSSProperties}>
                   <CategoryIcon icon={cat?.icon} color={cat?.color} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="flex justify-between text-sm">
-                      <span className="truncate font-medium text-zinc-900 dark:text-zinc-50">{c.name}</span>
-                      <span className="tabular-nums text-zinc-700 dark:text-zinc-300">{formatPaise(c.totalPaise)}</span>
+                      <span className="truncate font-medium text-ink">{c.name}</span>
+                      <span className="tabular-nums text-ink-2">{formatPaise(c.totalPaise)}</span>
                     </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: cat?.color ?? "#64748b" }} />
+                    {/* Thin bar in the category's own colour: colour follows the entity. */}
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-raised">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: cat?.color ?? "var(--muted)" }} />
                     </div>
                   </div>
                 </li>
@@ -165,6 +228,8 @@ async function ChartSection() {
   );
 }
 
+const STATUS_ORDER = { over: 0, warning: 1, ok: 2 } as const;
+
 async function BudgetOverview() {
   const userId = await requireUserId();
   const ym = currentYearMonthIST();
@@ -172,38 +237,33 @@ async function BudgetOverview() {
 
   if (budgets.length === 0) {
     return (
-      <Card className="p-6">
-        <div className="text-center">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Budget overview</h2>
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            <Link href="/budgets" className="font-medium text-zinc-600 underline hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50">
-              Set budgets
-            </Link>
-            {" "}to track your spending against limits.
-          </p>
-        </div>
+      <Card className="p-4 text-center">
+        <SectionLabel>Budgets</SectionLabel>
+        <p className="mt-2 text-sm text-ink-3">
+          <Link href="/budgets" className="font-medium text-primary-ink underline-offset-4 hover:underline">
+            Set a monthly limit
+          </Link>{" "}
+          to get a heads-up at 80% and when you go over.
+        </p>
       </Card>
     );
   }
 
-  // Show budgets with warning/over status first
-  const sorted = [...budgets].sort((a, b) => {
-    const statusOrder = { over: 0, warning: 1, ok: 2 };
-    return statusOrder[a.status] - statusOrder[b.status];
-  });
+  // Needs-attention first.
+  const sorted = [...budgets].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
   return (
-    <Card className="p-6">
-      <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Budget overview</h2>
-      <div className="space-y-2">
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <SectionLabel>Budgets</SectionLabel>
+        <Link href="/budgets" className="inline-flex items-center gap-1 text-xs font-medium text-primary-ink hover:underline">
+          {sorted.length > 5 ? `All ${sorted.length}` : "Manage"} <ArrowRight className="size-3" aria-hidden />
+        </Link>
+      </div>
+      <div className="divide-y divide-line">
         {sorted.slice(0, 5).map((b) => (
           <BudgetMeter key={b.id} categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
         ))}
-        {sorted.length > 5 && (
-          <Link href="/budgets" className="mt-3 inline-flex text-xs font-medium text-zinc-600 underline hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
-            View all budgets →
-          </Link>
-        )}
       </div>
     </Card>
   );

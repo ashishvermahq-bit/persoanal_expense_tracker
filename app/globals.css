@@ -1,26 +1,337 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Paisa design tokens. Tailwind 4 is configured in CSS: there is no
+ * tailwind.config.js. Full spec, contrast table and rationale: docs/design-system.md.
+ *
+ * Theme resolution:
+ *   <html data-theme="light|dark"> is set before first paint by the inline
+ *   script in app/layout.tsx (see lib/theme.ts). With JS off, there's no
+ *   attribute and the OS preference applies via the media query below.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* `dark:` follows the explicit theme first, then the OS when none is set. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ---------------------------------------------------------------- light */
+:root {
+  color-scheme: light;
+  --plane: #f9f9f7; /* page background */
+  --surface: #fcfcfb; /* cards, sheets */
+  --raised: #f0efec; /* hover wash, track */
+  --ink: #0b0b0b;
+  --ink-2: #52514e; /* secondary text */
+  --ink-3: #6b6a65; /* muted text, 5.3:1 (spec #898781 is 3.5:1, fails AA as text) */
+  --muted: #898781; /* decorative: icons, axes, placeholders */
+  --line: rgba(11, 11, 11, 0.1);
+  --grid: #e1e0d9;
+
+  /* Brand blue. `primary` is the hue for marks, focus rings and active icons.
+     Filled buttons use `primary-solid`: white on #2a78d6 is 4.4:1 (fails AA). */
+  --primary: #2a78d6;
+  --primary-solid: #256abf;
+  --primary-solid-hover: #286fcb;
+  --primary-solid-active: #1c5cab;
+  --on-primary: #ffffff;
+  --primary-ink: #256abf; /* link / text use */
+
+  --success: #0ca30c;
+  --success-ink: #006300;
+  --warning: #fab219;
+  --warning-ink: #8a5a00;
+  --danger: #e34948;
+  --danger-ink: #c02f2f;
+  --danger-solid: #c93a39;
+  --on-danger: #ffffff;
+
+  /* Categorical series, validated order (dataviz palette). */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --sheet-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* ----------------------------------------------------------------- dark */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --raised: #232322;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --ink-3: #a3a29a;
+    --muted: #898781;
+    --line: rgba(255, 255, 255, 0.1);
+    --grid: #2c2c2a;
+    --primary: #3987e5;
+    --primary-solid: #3987e5;
+    --primary-solid-hover: #5598e7;
+    --primary-solid-active: #2f7fdf;
+    --on-primary: #0b0b0b; /* white on #3987e5 is 3.6:1; near-black is 5.4:1 */
+    --primary-ink: #5598e7;
+    --success: #0ca30c;
+    --success-ink: #0ca30c;
+    --warning: #fab219;
+    --warning-ink: #fab219;
+    --danger: #e66767;
+    --danger-ink: #e66767;
+    --danger-solid: #e66767;
+    --on-danger: #0b0b0b;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #0ca30c;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sheet-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane: #0d0d0d;
+  --surface: #1a1a19;
+  --raised: #232322;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --ink-3: #a3a29a;
+  --muted: #898781;
+  --line: rgba(255, 255, 255, 0.1);
+  --grid: #2c2c2a;
+  --primary: #3987e5;
+  --primary-solid: #3987e5;
+  --primary-solid-hover: #5598e7;
+  --primary-solid-active: #2f7fdf;
+  --on-primary: #0b0b0b;
+  --primary-ink: #5598e7;
+  --success: #0ca30c;
+  --success-ink: #0ca30c;
+  --warning: #fab219;
+  --warning-ink: #fab219;
+  --danger: #e66767;
+  --danger-ink: #e66767;
+  --danger-solid: #e66767;
+  --on-danger: #0b0b0b;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #0ca30c;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --sheet-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  /* Semantic colours → bg-surface, text-ink-3, bg-primary/10, border-line, … */
+  --color-plane: var(--plane);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-grid: var(--grid);
+  --color-primary: var(--primary);
+  --color-primary-solid: var(--primary-solid);
+  --color-primary-solid-hover: var(--primary-solid-hover);
+  --color-primary-solid-active: var(--primary-solid-active);
+  --color-on-primary: var(--on-primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-success: var(--success);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-solid: var(--danger-solid);
+  --color-on-danger: var(--on-danger);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
+  --color-series-5: var(--series-5);
+  --color-series-6: var(--series-6);
+  --color-series-7: var(--series-7);
+  --color-series-8: var(--series-8);
+
+  --shadow-card: var(--card-shadow);
+  --shadow-sheet: var(--sheet-shadow);
+}
+
+@theme {
+  /* System UI stack only: no web-font download. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+
+  /* Warm neutral scale. Remapping zinc re-themes every existing zinc-* utility:
+     zinc-900 = dark surface, zinc-950 = dark page, zinc-500 = AA muted text. */
+  --color-zinc-50: #f9f9f7;
+  --color-zinc-100: #f0efec;
+  --color-zinc-200: #e1e0d9;
+  --color-zinc-300: #c3c2b7;
+  --color-zinc-400: #a3a29a;
+  --color-zinc-500: #6b6a65;
+  --color-zinc-600: #52514e;
+  --color-zinc-700: #3e3d3a;
+  --color-zinc-800: #2c2c2a;
+  --color-zinc-900: #1a1a19;
+  --color-zinc-950: #0d0d0d;
+  /* "white" in this app means the light card surface. */
+  --color-white: #fcfcfb;
+
+  /* Type scale (16px root). */
+  --text-hero: 3rem;
+  --text-hero--line-height: 1.1;
+  --text-stat: 1.75rem;
+  --text-stat--line-height: 1.2;
+  --text-micro: 0.625rem;
+  --text-micro--line-height: 1.2;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-back: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-slide-up: slide-up 0.3s ease-out both;
+  --animate-scale-in: scale-in 0.2s ease-out both;
+  --animate-bounce-in: bounce-in 0.4s var(--ease-back) both;
+  /* Staggered: set style={{ "--i": index }} on each item (20ms apart, capped at 12). */
+  --animate-list-in: list-in 0.2s ease-out calc(min(var(--i, 0), 12) * 20ms) both;
+  --animate-value-pop: value-pop 0.3s ease-out;
+  --animate-check-pop: check-pop 0.5s ease-out both;
+  --animate-breathe: breathe 2s ease-in-out infinite;
+  --animate-pulse: pulse 1.5s ease-in-out infinite;
+  --animate-spin: spin 1s linear infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes bounce-in {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  @keyframes list-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes value-pop {
+    0% { transform: scale(1.05); color: var(--success-ink); }
+    100% { transform: scale(1); }
+  }
+  @keyframes check-pop {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  @keyframes breathe {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  @keyframes ripple {
+    from { transform: scale(0); opacity: 0.18; }
+    to { transform: scale(1); opacity: 0; }
+  }
+}
+
+/* iOS notch / home-bar insets (viewport-fit=cover is set in app/layout.tsx). */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+@layer base {
+  html {
+    background: var(--plane);
+  }
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Ripple on non-button clickables: add data-ripple; components/motion.tsx
+   positions it at the pointer and re-triggers it on each press. */
+[data-ripple] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+[data-ripple][data-rippling]::after {
+  content: "";
+  position: absolute;
+  left: var(--ripple-x, 50%);
+  top: var(--ripple-y, 50%);
+  width: var(--ripple-size, 200px);
+  height: var(--ripple-size, 200px);
+  margin: calc(var(--ripple-size, 200px) / -2) 0 0 calc(var(--ripple-size, 200px) / -2);
+  border-radius: 9999px;
+  background: currentColor;
+  pointer-events: none;
+  animation: ripple 0.6s ease-out forwards;
+}
+
+/* Native <dialog> leaves with no animation; the backdrop fades in. */
+dialog[open]::backdrop {
+  animation: fade-in 0.2s ease-out both;
+}
+
+/* Reduced motion: everything resolves instantly to its end state. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::backdrop {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-ripple][data-rippling]::after {
+    display: none;
+  }
 }

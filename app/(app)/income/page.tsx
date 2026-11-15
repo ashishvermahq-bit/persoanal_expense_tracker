@@ -4,7 +4,7 @@ import { Wallet } from "lucide-react";
 import { IncomeForm } from "@/components/income/income-form";
 import { IncomeRow } from "@/components/income/income-row";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Card, PageHeader } from "@/components/ui/page-header";
+import { Card, PageHeader, Skeleton } from "@/components/ui/page-header";
 import { formatPaise } from "@/lib/money";
 import { requireUserId } from "@/lib/services/context";
 import { listIncome } from "@/lib/services/income";
@@ -22,7 +22,7 @@ export default function IncomePage() {
           <IncomeForm />
         </Suspense>
       </Card>
-      <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-800" />}>
+      <Suspense fallback={<Skeleton className="h-48" />}>
         <IncomeList />
       </Suspense>
     </div>
@@ -40,7 +40,7 @@ async function IncomeList() {
       <p className="mb-2 px-1 text-sm text-zinc-500 dark:text-zinc-400">
         <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-50">{formatPaise(result.totalPaise)}</span> across {result.total} {result.total === 1 ? "entry" : "entries"}
       </p>
-      <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface shadow-card">
         {result.items.map((i) => (
           <IncomeRow key={i.id} income={i} />
         ))}

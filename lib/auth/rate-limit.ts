@@ -15,7 +15,11 @@ export interface RateLimitResult {
   retryAfterSeconds: number;
 }
 
-export const AUTH_RATE_LIMIT: RateLimitRule = { limit: 10, windowSeconds: 15 * 60 };
+/** 10 per 15 min in production. AUTH_RATE_LIMIT_MAX exists only so the e2e server (one IP, many signups) can raise it. */
+export const AUTH_RATE_LIMIT: RateLimitRule = {
+  limit: Number(process.env.AUTH_RATE_LIMIT_MAX) > 0 ? Number(process.env.AUTH_RATE_LIMIT_MAX) : 10,
+  windowSeconds: 15 * 60,
+};
 
 /**
  * Fixed-window counter keyed by an arbitrary string (e.g. "login:ip:1.2.3.4").

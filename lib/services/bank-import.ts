@@ -1,7 +1,10 @@
 import "server-only";
 import { Types } from "mongoose";
-import { createExpense } from "./expenses";
+import { fromInputDate } from "@/lib/dates";
+import { toPaise } from "@/lib/money";
+import type { CreateExpenseInput } from "@/lib/validation/expense";
 import type { PaymentMethod, TaxSection } from "@/types/models";
+import { createExpense } from "./expenses";
 
 interface BankTransaction {
   date: string; // YYYY-MM-DD
@@ -100,15 +103,25 @@ export async function importTransactions(
 
   for (const tx of transactions) {
     try {
-      await createExpense(userObjectId, {
-        amountPaise: Math.round(tx.amount * 100),
+      // Credits (negative amounts) aren't expenses; skip rather than fail validation.
+      if (tx.amount <= 0) {
+        skipped++;
+        continue;
+      }
+      const date = fromInputDate(tx.date);
+      if (!date) throw new Error(`Invalid date: ${tx.date}`);
+      const input: CreateExpenseInput = {
+        amountPaise: toPaise(tx.amount),
         categoryId,
-        date: tx.date,
+        date,
         paymentMethod,
-        description: tx.description,
-        merchant: tx.merchant,
-        taxSection: "none" as TaxSection,
-      } as any);
+        upiApp: null,
+        description: tx.description.slice(0, 200) || null,
+        merchant: tx.merchant?.slice(0, 100) || null,
+        taxSection: "none" satisfies TaxSection,
+        tags: [],
+      };
+      await createExpense(userObjectId, input);
       imported++;
     } catch (err) {
       skipped++;

@@ -17,8 +17,19 @@ export function FilterBar({ categories }: { categories: CategoryDTO[] }) {
   const pathname = usePathname();
   const sp = useSearchParams();
   const [, startTransition] = useTransition();
-  const [q, setQ] = useState(sp.get("q") ?? "");
+  const urlQ = sp.get("q") ?? "";
+  const [q, setQ] = useState(urlQ);
   const [open, setOpen] = useState(false);
+
+  // The URL is the source of truth. With cacheComponents, Next keeps this page
+  // alive in <Activity> between visits, so local state can outlive a navigation
+  // (e.g. back to /expenses after editing) and the debounced effect below would
+  // push the stale search back into the URL. Re-sync whenever the URL's q changes.
+  const [syncedQ, setSyncedQ] = useState(urlQ);
+  if (urlQ !== syncedQ) {
+    setSyncedQ(urlQ);
+    setQ(urlQ);
+  }
 
   const activeCount = FILTER_KEYS.filter((k) => k !== "q" && k !== "sort" && sp.get(k)).length;
 
@@ -56,14 +67,14 @@ export function FilterBar({ categories }: { categories: CategoryDTO[] }) {
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search description, merchant, tags…"
             aria-label="Search expenses"
-            className="block h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
+            className="block h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-base text-ink outline-none transition-[border-color,box-shadow] placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-primary sm:text-sm pointer-coarse:h-11"
           />
         </div>
         <Button type="button" variant="secondary" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="filters">
           <SlidersHorizontal className="size-4" aria-hidden />
           Filters
           {activeCount > 0 && (
-            <span className="ml-0.5 rounded-full bg-zinc-900 px-1.5 text-[10px] font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900">{activeCount}</span>
+            <span className="ml-0.5 rounded-full bg-primary-solid px-1.5 text-micro font-semibold text-on-primary">{activeCount}</span>
           )}
         </Button>
       </div>

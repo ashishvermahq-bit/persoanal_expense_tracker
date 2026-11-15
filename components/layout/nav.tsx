@@ -2,15 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Plus, ReceiptIndianRupee, Tags, Wallet } from "lucide-react";
+import { Gauge, LayoutDashboard, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-const ITEMS = [
+const DESKTOP_ITEMS = [
+  { href: "/dashboard", label: "Home" },
+  { href: "/expenses", label: "Expenses" },
+  { href: "/income", label: "Income" },
+  { href: "/budgets", label: "Budgets" },
+  { href: "/categories", label: "Categories" },
+] as const;
+
+/** Mobile bottom bar: four destinations around the Add FAB. Categories & preferences live behind the header's settings icon. */
+const MOBILE_ITEMS = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/expenses", label: "Expenses", icon: ReceiptIndianRupee },
   { href: "/add", label: "Add", icon: Plus, primary: true },
   { href: "/income", label: "Income", icon: Wallet },
-  { href: "/categories", label: "Categories", icon: Tags },
+  { href: "/budgets", label: "Budgets", icon: Gauge },
 ] as const;
 
 function isActive(pathname: string, href: string) {
@@ -22,35 +31,33 @@ export function DesktopNav() {
   const pathname = usePathname();
   return (
     <nav aria-label="Primary" className="hidden items-center gap-1 sm:flex">
-      {ITEMS.filter((i) => !("primary" in i)).map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          aria-current={isActive(pathname, item.href) ? "page" : undefined}
-          className={cn(
-            "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-            isActive(pathname, item.href)
-              ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-              : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
-          )}
-        >
-          {item.label}
-        </Link>
-      ))}
+      {DESKTOP_ITEMS.map((item) => {
+        const active = isActive(pathname, item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              active ? "bg-primary/10 text-primary-ink" : "text-ink-3 hover:bg-ink/5 hover:text-ink"
+            )}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
 
-/** Mobile: fixed bottom bar with a prominent Add button. */
+/** Mobile: fixed bottom bar (64px + home-bar inset) with a floating Add button. */
 export function MobileNav() {
   const pathname = usePathname();
   return (
-    <nav
-      aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden dark:border-zinc-800 dark:bg-zinc-900/95"
-    >
+    <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 pb-safe px-safe backdrop-blur sm:hidden">
       <ul className="grid h-16 grid-cols-5">
-        {ITEMS.map((item) => {
+        {MOBILE_ITEMS.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
           if ("primary" in item) {
@@ -60,7 +67,7 @@ export function MobileNav() {
                   href={item.href}
                   aria-label="Add expense"
                   data-testid="nav-add"
-                  className="flex size-12 -translate-y-3 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg transition-transform active:scale-95 dark:bg-zinc-50 dark:text-zinc-900"
+                  className="flex size-14 -translate-y-4 animate-bounce-in items-center justify-center rounded-full bg-primary-solid text-on-primary shadow-lg ring-4 ring-plane transition-[scale] duration-100 focus-visible:outline-none focus-visible:ring-primary active:scale-95"
                 >
                   <Icon className="size-6" aria-hidden />
                 </Link>
@@ -72,12 +79,13 @@ export function MobileNav() {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                data-ripple
                 className={cn(
-                  "flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                  active ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-500 dark:text-zinc-400"
+                  "flex h-full flex-col items-center justify-center gap-1 text-micro font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+                  active ? "text-primary-ink" : "text-ink-3"
                 )}
               >
-                <Icon className="size-5" aria-hidden />
+                <Icon className={cn("size-6", active ? "text-primary" : "text-muted")} aria-hidden />
                 {item.label}
               </Link>
             </li>
@@ -87,3 +95,4 @@ export function MobileNav() {
     </nav>
   );
 }
+
