@@ -4,6 +4,7 @@ import { createExpense, listExpenses } from "@/lib/services/expenses";
 import { createExpenseSchema, expenseFiltersSchema } from "@/lib/validation/expense";
 import { getBudgetForCategory } from "@/lib/services/budgets";
 import { yearMonthOf } from "@/lib/dates";
+import { formatPaise } from "@/lib/money";
 
 export const GET = withAuth(async (request, _ctx, { userId }) => {
   const url = new URL(request.url);
@@ -32,7 +33,7 @@ export const POST = withAuth(async (request, _ctx, { userId }) => {
       spendPaise: budget.spendPaise,
       message:
         budget.status === "over"
-          ? `Exceeded by ₹${(over / 100).toLocaleString("en-IN")}`
+          ? `Exceeded by ${formatPaise(over)}`
           : `${Math.round((budget.spendPaise / budget.amountPaise) * 100)}% of budget used`,
     };
   }

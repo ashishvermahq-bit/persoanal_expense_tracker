@@ -22,6 +22,7 @@ export async function listCategories(
 
 /** Resolves a category the user may use (system or their own, not archived). */
 export async function assertUsableCategory(userId: Types.ObjectId, categoryId: string): Promise<Types.ObjectId> {
+  if (!/^[0-9a-f]{24}$/i.test(categoryId)) throw new ApiError("VALIDATION", "Choose a category", { categoryId: "Choose a valid category" });
   const cat = await Category.findOne(
     { _id: new Types.ObjectId(categoryId), isArchived: false, $or: [{ userId: null, isSystem: true }, { userId }] },
     { _id: 1 }
@@ -49,8 +50,13 @@ export async function createCategory(userId: Types.ObjectId, input: CreateCatego
   return toCategoryDTO(doc.toObject());
 }
 
+function categoryId(id: string): Types.ObjectId {
+  if (!Types.ObjectId.isValid(id) || !/^[0-9a-f]{24}$/i.test(id)) throw new ApiError("NOT_FOUND", "Category not found");
+  return new Types.ObjectId(id);
+}
+
 export async function updateCategory(userId: Types.ObjectId, id: string, input: UpdateCategoryInput): Promise<CategoryDTO> {
-  const _id = new Types.ObjectId(id);
+  const _id = categoryId(id);
   const existing = await Category.findOne({ _id, userId }).lean();
   if (!existing) {
     const system = await Category.exists({ _id, isSystem: true });
@@ -64,7 +70,8 @@ export async function updateCategory(userId: Types.ObjectId, id: string, input: 
     if (clash) throw new ApiError("CONFLICT", "A category with this name already exists", { name: "Already exists" });
   }
   const doc = await Category.findOneAndUpdate({ _id, userId }, { $set: input }, { returnDocument: "after", lean: true });
-  return toCategoryDTO(doc!);
+  if (!doc) throw new ApiError("NOT_FOUND", "Category not found");
+  return toCategoryDTO(doc);
 }
 
 /**
@@ -72,7 +79,7 @@ export async function updateCategory(userId: Types.ObjectId, id: string, input: 
  * archive instead. Unused custom categories can be removed outright.
  */
 export async function deleteCategory(userId: Types.ObjectId, id: string): Promise<{ archived: boolean }> {
-  const _id = new Types.ObjectId(id);
+  const _id = categoryId(id);
   const cat = await Category.findOne({ _id, userId }).lean();
   if (!cat) {
     if (await Category.exists({ _id, isSystem: true })) {
@@ -82,9 +89,9 @@ export async function deleteCategory(userId: Types.ObjectId, id: string): Promis
   }
   const inUse = await Expense.exists({ userId, categoryId: _id });
   if (inUse) {
-    await Category.updateOne({ _id }, { $set: { isArchived: true } });
+    await Category.updateOne({ _id, userId }, { $set: { isArchived: true } });
     return { archived: true };
   }
-  await Category.deleteOne({ _id });
+  await Category.deleteOne({ _id, userId });
   return { archived: false };
 }

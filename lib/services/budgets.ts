@@ -6,6 +6,7 @@ import { monthRange } from "@/lib/dates";
 import { compact } from "./compact";
 import type { BudgetDTO } from "@/types/dto";
 import type { CreateBudget } from "@/lib/validation/budget";
+import { assertUsableCategory } from "./categories";
 
 export type BudgetStatus = "ok" | "warning" | "over";
 
@@ -192,7 +193,9 @@ export async function upsertBudget(
   data: CreateBudget,
 ): Promise<BudgetDTO> {
   const userObjectId = typeof userId === "string" ? new Types.ObjectId(userId) : userId;
-  const categoryObjectId = new Types.ObjectId(data.categoryId);
+  // Only a category this user may use (system or their own): a budget on someone
+  // else's category id would echo its name/colour/icon back in listBudgetsWithSpend.
+  const categoryObjectId = await assertUsableCategory(userObjectId, data.categoryId);
 
   const payload = compact({
     userId: userObjectId,
