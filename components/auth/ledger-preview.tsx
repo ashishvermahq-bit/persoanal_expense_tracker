@@ -71,10 +71,11 @@ export function LedgerPreview({ className }: { className?: string }) {
             <CountUp paise={SPENT_PAISE} />
           </p>
         </div>
-        {/* 2px sparkline that draws itself once (stroke-dashoffset via animate-draw). */}
+        {/* 2px sparkline that draws itself once (stroke-dashoffset via animate-draw).
+            Red (danger token) as a spend line; decorative, the figure's aria-label carries the meaning. */}
         <svg viewBox="0 0 120 32" className="h-10 w-32 overflow-visible" aria-hidden>
-          <path d={SPARK} pathLength={1} fill="none" stroke="var(--primary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1" className="animate-draw" />
-          <circle cx="120" cy="3" r="3" fill="var(--primary)" stroke="var(--surface)" strokeWidth="2" className="animate-fade-in [animation-delay:1.1s]" />
+          <path d={SPARK} pathLength={1} fill="none" stroke="var(--danger)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1" className="animate-draw" />
+          <circle cx="120" cy="3" r="3" fill="var(--danger)" stroke="var(--surface)" strokeWidth="2" className="animate-fade-in [animation-delay:1.1s]" />
         </svg>
       </div>
 
