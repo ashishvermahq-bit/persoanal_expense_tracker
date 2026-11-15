@@ -50,7 +50,18 @@ semantic tokens. `white` is remapped to `#fcfcfb` (the light surface).
 - Never hard-code hex in components. Use a token, or add one in `globals.css`.
 - Status colour is never the only signal: pair it with an icon and a text label.
 - Text never wears a series/status *fill* colour; use the `*-ink` token or `ink`.
-- Category colours are entity colours stored per category (DB), not tokens.
+- **Category colour** is entity data stored per category, and it shows wherever a category appears:
+  icons (quick add, expense rows, recent, top categories, insight chips, category manager), dots (budget
+  meters, filter chips, legends) and bars (top-categories split, Trends by category). Text stays in ink.
+  - `CategoryIcon`: the category's own colour at full strength on an 18% tint of the same colour, both themes.
+  - `lib/color.ts` → `categoryTones()` checks each colour against its own tint over the card surface and
+    nudges it (darker on light, lighter on dark, 4% steps) **only if it fails 3:1** there. Of the 19 seed
+    colours + picker palette, most are unchanged in each theme; nudges are small (e.g. `#16a34a` → `#149644`
+    on light, `#4f46e5` → `#6b64e9` on dark). Unit-tested in `tests/unit/color.test.ts`.
+  - Use it via `categoryStyle(color)` + the `cat` utility, then `var(--cat)` (`text-[var(--cat)]`,
+    `bg-[var(--cat)]`, `cat-icon`). No colour → the muted token.
+  - The login passbook uses series tokens the same way (Kirana aqua, Rent violet, Food orange). Light aqua is
+    2.74:1 on the card, so it's mixed 6% toward black (3.07:1); the others pass as-is.
 
 ### Type
 

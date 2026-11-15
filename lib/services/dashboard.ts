@@ -8,6 +8,7 @@ import { Expense } from "@/models/expense";
 import type { MonthlySummaryDTO, TrendPeriodDTO, UpcomingDTO } from "@/types/dto";
 import type { FyStart, PaymentMethod } from "@/types/models";
 import { listBudgetsWithSpend } from "./budgets";
+import { listCategories } from "./categories";
 import { getPreferences } from "./preferences";
 import { getUpcomingRecurring } from "./recurring";
 import { toSummaryDTO } from "./serialize";
@@ -25,10 +26,11 @@ export const loadGlance = cache(async (userIdHex: string) => {
   const ym = currentYearMonthIST();
   const prevYm = previousMonth(ym);
   const today = istParts(todayIST());
-  const [current, previous, budgets] = await Promise.all([
+  const [current, previous, budgets, categories] = await Promise.all([
     getOrComputeSummary(userId, ym).then(toSummaryDTO),
     getOrComputeSummary(userId, prevYm).then(toSummaryDTO),
     listBudgetsWithSpend(userId, ym.year, ym.month),
+    listCategories(userId, { includeArchived: true }),
   ]);
   return {
     today,
@@ -41,6 +43,8 @@ export const loadGlance = cache(async (userIdHex: string) => {
     current,
     previous,
     budgets,
+    /** id → icon/colour, for showing each category's colour wherever it appears. */
+    categoryLook: Object.fromEntries(categories.map((c) => [c.id, { icon: c.icon, color: c.color }])) as Record<string, { icon: string | null; color: string | null }>,
   };
 });
 
@@ -107,8 +111,8 @@ export async function loadTrends(userId: Types.ObjectId): Promise<TrendPeriodDTO
   ]);
 
   const catIds = [...new Set([...week.byCategory, ...mon.byCategory, ...year.byCategory].map((c) => c._id.toHexString()))];
-  const cats = await Category.find({ _id: { $in: catIds.map((id) => new Types.ObjectId(id)) } }, { name: 1 }).lean();
-  const catName = new Map(cats.map((c) => [c._id.toHexString(), c.name]));
+  const cats = await Category.find({ _id: { $in: catIds.map((id) => new Types.ObjectId(id)) } }, { name: 1, color: 1 }).lean();
+  const catById = new Map(cats.map((c) => [c._id.toHexString(), c]));
 
   const finish = (key: TrendPeriodDTO["key"], label: string, agg: RangeAgg, buckets: { key: string; label: string }[]): TrendPeriodDTO => {
     const byKey = new Map(agg.series.map((s) => [s._id, s.totalPaise]));
@@ -118,7 +122,10 @@ export async function loadTrends(userId: Types.ObjectId): Promise<TrendPeriodDTO
       label,
       totalPaise: series.reduce((s, b) => s + b.totalPaise, 0),
       series,
-      byCategory: agg.byCategory.map((c) => ({ key: c._id.toHexString(), name: catName.get(c._id.toHexString()) ?? "Unknown", totalPaise: c.totalPaise, count: c.count })),
+      byCategory: agg.byCategory.map((c) => {
+        const cat = catById.get(c._id.toHexString());
+        return { key: c._id.toHexString(), name: cat?.name ?? "Unknown", color: cat?.color ?? null, totalPaise: c.totalPaise, count: c.count };
+      }),
       byPaymentMethod: agg.byPaymentMethod.map((m) => ({ key: m._id, name: PAYMENT_METHOD_LABELS[m._id] ?? m._id, totalPaise: m.totalPaise, count: m.count })),
     };
   };

@@ -14,11 +14,16 @@ import { Check } from "lucide-react";
  * nothing shifts.
  */
 const OPENING = 85_000_00;
+// Category colours from the series tokens: Kirana = aqua, Rent = violet, Food = orange.
+// Light/dark tones go through the `cat` utility. Light aqua is 2.74:1 on the card,
+// so it's darkened by the smallest step that clears 3:1 (6% → 3.07:1); the others pass as-is.
 const ROWS = [
-  { date: "02/11", particulars: "UPI · Kirana Store", debit: 1_240_00 },
-  { date: "05/11", particulars: "Rent · November", debit: 18_000_00 },
-  { date: "06/11", particulars: "Swiggy", debit: 486_00 },
+  { date: "02/11", particulars: "UPI · Kirana Store", debit: 1_240_00, light: "color-mix(in srgb, var(--series-3) 94%, black)", dark: "var(--series-3)" },
+  { date: "05/11", particulars: "Rent · November", debit: 18_000_00, light: "var(--series-7)", dark: "var(--series-7)" },
+  { date: "06/11", particulars: "Swiggy", debit: 486_00, light: "var(--series-2)", dark: "var(--series-2)" },
 ];
+const tone = (r: (typeof ROWS)[number]) => ({ "--cat-l": r.light, "--cat-d": r.dark }) as React.CSSProperties;
+const DEBITS = ROWS.reduce((s, r) => s + r.debit, 0);
 // Running balance per row, computed once (static sample data).
 const LINES = ROWS.map((r, i) => ({ ...r, balance: OPENING - ROWS.slice(0, i + 1).reduce((s, x) => s + x.debit, 0) }));
 const CLOSING = LINES[LINES.length - 1]!.balance;
@@ -71,14 +76,14 @@ export function PassbookPreview({ className }: { className?: string }) {
 
       <div className="px-4 pt-2 text-xs">
         {/* Column heads: the passbook's ruled header. */}
-        <div className={`${cols} border-b-2 border-double border-line pb-1.5 text-micro font-semibold uppercase tracking-[0.05em] text-ink-3`}>
+        <div className={`${cols} border-l-[3px] border-l-transparent pl-2 border-b-2 border-double border-line pb-1.5 text-micro font-semibold uppercase tracking-[0.05em] text-ink-3`}>
           <span>Date</span>
           <span>Particulars</span>
           <span className="text-right">Debit ₹</span>
           <span className="text-right">Balance ₹</span>
         </div>
 
-        <div className={`${cols} border-b border-line py-2 text-ink-3`}>
+        <div className={`${cols} border-l-[3px] border-l-transparent pl-2 border-b border-line py-2 text-ink-3`}>
           <span className="tabular-nums">01/11</span>
           <span className="italic">Balance b/f</span>
           <span className="text-right">—</span>
@@ -87,9 +92,16 @@ export function PassbookPreview({ className }: { className?: string }) {
 
         {LINES.map((r, i) => {
           return (
-            <div key={r.particulars} className={`${cols} animate-type-in border-b border-line py-2`} style={{ "--i": i } as React.CSSProperties}>
+            <div
+              key={r.particulars}
+              className={`${cols} cat animate-type-in border-b border-l-[3px] border-line border-l-[color:var(--cat)] pl-2 py-2`}
+              style={{ "--i": i, ...tone(r) } as React.CSSProperties}
+            >
               <span className="tabular-nums text-ink-3">{r.date}</span>
-              <span className="truncate text-ink">{r.particulars}</span>
+              <span className="flex min-w-0 items-center gap-1.5 text-ink">
+                <span aria-hidden className="size-2 shrink-0 rounded-full bg-[var(--cat)]" />
+                <span className="truncate">{r.particulars}</span>
+              </span>
               <span className="text-right tabular-nums text-ink">{amt(r.debit)}</span>
               <span className="text-right tabular-nums text-ink-2">{amt(r.balance)}</span>
             </div>
@@ -98,11 +110,17 @@ export function PassbookPreview({ className }: { className?: string }) {
       </div>
 
       <div className="flex items-end justify-between gap-3 px-4 pb-4 pt-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-ink-3">Closing balance</p>
           <p className="text-stat font-semibold tracking-tight text-ink">
             <BalanceTicker />
           </p>
+          {/* Slim split of this month's three debits, in their category colours (2px gaps). */}
+          <div className="mt-2 flex h-1.5 max-w-40 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+            {ROWS.map((r, i) => (
+              <span key={r.particulars} className="cat h-full animate-type-in bg-[var(--cat)]" style={{ width: `${(r.debit / DEBITS) * 100}%`, "--i": i, ...tone(r) } as React.CSSProperties} />
+            ))}
+          </div>
         </div>
         {/* The seal: a rubber stamp in success ink that presses into place. */}
         <span

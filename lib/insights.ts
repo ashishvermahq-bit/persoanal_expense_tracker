@@ -69,6 +69,8 @@ export interface Insight {
   href: string;
   tone: InsightTone;
   icon: InsightIcon;
+  /** When the insight is about one category, so the UI can show its colour. */
+  categoryId?: string;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -103,11 +105,12 @@ export function computeInsights(input: GlanceInput, max = 5): Insight[] {
       href: monthQuery(today, daysInMonth, { categoryId: biggest.categoryId }),
       tone: "neutral",
       icon: "biggest",
+      categoryId: biggest.categoryId,
     });
   }
 
   const rent = current.byCategory.find((c) => c.name.toLowerCase() === "rent");
-  if (rent) out.push({ id: "rent", text: "Rent paid", href: monthQuery(today, daysInMonth, { categoryId: rent.categoryId }), tone: "good", icon: "check" });
+  if (rent) out.push({ id: "rent", text: "Rent paid", href: monthQuery(today, daysInMonth, { categoryId: rent.categoryId }), tone: "good", icon: "check", categoryId: rent.categoryId });
 
   if (current.totalIncomePaise > 0 && current.savingsRate !== null && current.savingsPaise > 0) {
     out.push({ id: "saved", text: `Saved ${Math.round(current.savingsRate * 100)}% of income`, href: "/income", tone: "good", icon: "piggy" });

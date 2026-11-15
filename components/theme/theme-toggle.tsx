@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
+import { useHydrated } from "@/components/ui/form";
 import { cn } from "@/lib/cn";
 import { getResolvedThemeSnapshot, readStoredTheme, setTheme, subscribeTheme, type ResolvedTheme } from "@/lib/theme";
 import type { Theme } from "@/types/models";
@@ -56,12 +57,15 @@ export function ThemeSegmented({ onChange }: { onChange?: (theme: Theme) => void
 /** Compact header button: flips between light and dark (an explicit choice). */
 export function ThemeToggleButton() {
   const resolved = useResolvedTheme();
+  // Until hydration the click has no handler: say so (aria-disabled), without a visual flicker.
+  const hydrated = useHydrated();
   const next: ResolvedTheme = resolved === "dark" ? "light" : "dark";
   const label = `Switch to ${next} theme`;
   return (
     <button
       type="button"
-      onClick={() => setTheme(next, { persist: true })}
+      onClick={() => hydrated && setTheme(next, { persist: true })}
+      aria-disabled={!hydrated || undefined}
       aria-label={label}
       title={label}
       className="inline-flex size-9 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:size-11"

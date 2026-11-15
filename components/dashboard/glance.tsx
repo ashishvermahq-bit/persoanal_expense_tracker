@@ -23,7 +23,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Card, SectionLabel } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { istParts, todayIST } from "@/lib/dates";
-import { computeInsights, safeToSpend, spendingPace, type InsightIcon, type InsightTone } from "@/lib/insights";
+import { CategoryIcon } from "@/components/categories/category-icon";
+import { categoryStyle } from "@/lib/color";
+import { computeInsights, monthQuery, safeToSpend, spendingPace, type InsightIcon, type InsightTone } from "@/lib/insights";
 import { formatPaise } from "@/lib/money";
 import type { Glance } from "@/lib/services/dashboard";
 import type { ExpenseDTO, UpcomingDTO } from "@/types/dto";
@@ -126,6 +128,8 @@ export function InsightChips({ g }: { g: Glance }) {
         {insights.map((ins, i) => {
           const Icon = INSIGHT_ICON[ins.icon];
           const tone = TONE[ins.tone];
+          // About one category? Show that category's own icon + colour.
+          const look = ins.categoryId ? g.categoryLook[ins.categoryId] : undefined;
           return (
             <li key={ins.id} className="shrink-0 snap-start animate-list-in" style={{ "--i": i } as React.CSSProperties}>
               <Link
@@ -133,11 +137,12 @@ export function InsightChips({ g }: { g: Glance }) {
                 data-ripple
                 data-testid="insight-chip"
                 className={cn(
-                  "inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-sm font-medium shadow-card transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  "inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full border text-sm font-medium shadow-card transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  look ? "pl-1.5 pr-3.5" : "px-3.5",
                   tone.chip
                 )}
               >
-                <Icon className={cn("size-4", tone.icon)} aria-hidden />
+                {look ? <CategoryIcon icon={look.icon} color={look.color} size="sm" /> : <Icon className={cn("size-4", tone.icon)} aria-hidden />}
                 {ins.text}
               </Link>
             </li>
@@ -145,6 +150,67 @@ export function InsightChips({ g }: { g: Glance }) {
         })}
       </ul>
     </nav>
+  );
+}
+
+/* -------------------------------------------------------- top categories */
+
+/**
+ * Where the money went: a thin segmented bar in each category's own colour
+ * (tail folded into "Other"), then rows with icon, name, share and amount.
+ * Text stays in ink; colour lives on the icons and the bar.
+ */
+export function TopCategories({ g }: { g: Glance }) {
+  const total = g.current.totalExpensePaise;
+  const sorted = [...g.current.byCategory].sort((a, b) => b.totalPaise - a.totalPaise);
+  if (total <= 0 || sorted.length === 0) return null;
+  const top = sorted.slice(0, 4);
+  const otherPaise = sorted.slice(4).reduce((sum, c) => sum + c.totalPaise, 0);
+  const share = (p: number) => Math.round((p / total) * 100);
+
+  return (
+    <Card className="p-4" data-testid="top-categories">
+      <div className="flex items-center justify-between">
+        <SectionLabel>Top categories</SectionLabel>
+        <span className="text-xs tabular-nums text-ink-3">{formatPaise(total)}</span>
+      </div>
+      {/* Thin segmented bar: no text on it; the rows below carry the figures. 2px gaps. */}
+      <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+        {top.map((c) => (
+          <span key={c.categoryId} className="cat h-full bg-[var(--cat)] first:rounded-l-full last:rounded-r-full" style={{ ...categoryStyle(g.categoryLook[c.categoryId]?.color), width: `${(c.totalPaise / total) * 100}%` }} />
+        ))}
+        {otherPaise > 0 && <span className="h-full rounded-r-full bg-muted/40" style={{ width: `${(otherPaise / total) * 100}%` }} />}
+      </div>
+      <ul className="mt-2 divide-y divide-line">
+        {top.map((c) => {
+          const look = g.categoryLook[c.categoryId];
+          return (
+            <li key={c.categoryId}>
+              <Link
+                href={monthQuery(g.today, g.daysInMonth, { categoryId: c.categoryId })}
+                data-ripple
+                className="-mx-2 flex min-h-12 items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <CategoryIcon icon={look?.icon} color={look?.color} size="sm" />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{c.name}</span>
+                <span className="text-xs tabular-nums text-ink-3">{share(c.totalPaise)}%</span>
+                <span className="w-24 text-right text-sm font-semibold tabular-nums text-ink">{formatPaise(c.totalPaise)}</span>
+              </Link>
+            </li>
+          );
+        })}
+        {otherPaise > 0 && (
+          <li className="flex min-h-12 items-center gap-3 py-1.5">
+            <span aria-hidden className="flex size-7 items-center justify-center rounded-full bg-muted/20">
+              <span className="size-2 rounded-full bg-muted" />
+            </span>
+            <span className="min-w-0 flex-1 text-sm font-medium text-ink-2">Other ({sorted.length - 4})</span>
+            <span className="text-xs tabular-nums text-ink-3">{share(otherPaise)}%</span>
+            <span className="w-24 text-right text-sm font-semibold tabular-nums text-ink">{formatPaise(otherPaise)}</span>
+          </li>
+        )}
+      </ul>
+    </Card>
   );
 }
 
@@ -167,7 +233,7 @@ export function BudgetsGlance({ g }: { g: Glance }) {
       ) : (
         <div className="divide-y divide-line">
           {sorted.slice(0, 3).map((b) => (
-            <BudgetMeter key={b.categoryId} categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
+            <BudgetMeter key={b.categoryId} color={b.categoryColor} categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
           ))}
         </div>
       )}

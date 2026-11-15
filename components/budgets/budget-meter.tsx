@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, OctagonAlert } from "lucide-react";
+import { CategoryDot } from "@/components/categories/category-icon";
 import { cn } from "@/lib/cn";
 import { formatPaise } from "@/lib/money";
 import type { BudgetStatus } from "@/lib/services/budgets";
@@ -11,6 +12,8 @@ interface BudgetMeterProps {
   status: BudgetStatus;
   spendPaise: number;
   budgetPaise: number;
+  /** The category's colour: shown as a dot beside the name (identity; status keeps its own colours). */
+  color?: string | null;
   /** "adaptive": ring on phones, bar from sm up (budgets page). Default: bar. */
   layout?: "list" | "adaptive";
 }
@@ -36,7 +39,7 @@ function statusLabel(status: BudgetStatus, pct: number, spendPaise: number, budg
  * changes (e.g. router.refresh() after a new expense). Crossing a threshold
  * flashes the fill once.
  */
-export function BudgetMeter({ categoryName, status, spendPaise, budgetPaise, layout = "list" }: BudgetMeterProps) {
+export function BudgetMeter({ categoryName, status, spendPaise, budgetPaise, color, layout = "list" }: BudgetMeterProps) {
   const pct = budgetPaise > 0 ? Math.round((spendPaise / budgetPaise) * 100) : 0;
   const width = Math.min(pct, 100);
   const cfg = STATUS[status];
@@ -98,7 +101,10 @@ export function BudgetMeter({ categoryName, status, spendPaise, budgetPaise, lay
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="truncate text-sm font-medium text-ink">{categoryName}</p>
+            <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+              {color !== undefined && <CategoryDot color={color} />}
+              <span className="truncate">{categoryName}</span>
+            </p>
             <p className="shrink-0 text-xs tabular-nums text-ink-3">
               <span className="font-semibold text-ink">{formatPaise(spendPaise, { showPaise: "auto" })}</span> of {formatPaise(budgetPaise, { showPaise: "auto" })}
             </p>

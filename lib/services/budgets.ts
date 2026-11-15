@@ -13,6 +13,8 @@ export interface BudgetWithSpend {
   id: string;
   categoryId: string;
   categoryName: string;
+  categoryColor: string | null;
+  categoryIcon: string | null;
   amountPaise: number;
   spendPaise: number;
   status: BudgetStatus;
@@ -49,7 +51,7 @@ export async function listBudgetsWithSpend(
   // Get category names
   const categoryIds = budgets.map((b) => b.categoryId);
   const categories = await Category.find({ _id: { $in: categoryIds } }).lean();
-  const categoryMap = new Map(categories.map((c) => [c._id.toString(), c.name]));
+  const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
 
   // Get spend for each category in this month
   // IST month boundaries (server-local midnight would misfile 00:00–05:30 IST).
@@ -95,7 +97,8 @@ export async function listBudgetsWithSpend(
 
   return Array.from(byCategory.values()).map((budget) => {
     const categoryId = budget.categoryId.toString();
-    const categoryName = categoryMap.get(categoryId) || "Unknown";
+    const cat = categoryMap.get(categoryId);
+    const categoryName = cat?.name || "Unknown";
     const spendPaise = spendMap.get(categoryId) ?? 0;
     const status = getBudgetStatus(spendPaise, budget.amountPaise);
 
@@ -103,6 +106,8 @@ export async function listBudgetsWithSpend(
       id: budget._id.toString(),
       categoryId,
       categoryName,
+      categoryColor: cat?.color ?? null,
+      categoryIcon: cat?.icon ?? null,
       amountPaise: budget.amountPaise,
       spendPaise,
       status,
@@ -174,6 +179,8 @@ export async function getBudgetForCategory(
     id: budget._id.toString(),
     categoryId: budget.categoryId.toString(),
     categoryName: category.name,
+    categoryColor: category.color ?? null,
+    categoryIcon: category.icon ?? null,
     amountPaise: budget.amountPaise,
     spendPaise,
     status,

@@ -101,7 +101,7 @@ export interface TrendPeriodDTO {
   label: string;
   totalPaise: number;
   series: { key: string; label: string; totalPaise: number }[];
-  byCategory: { key: string; name: string; totalPaise: number; count: number }[];
+  byCategory: { key: string; name: string; color: string | null; totalPaise: number; count: number }[];
   byPaymentMethod: { key: string; name: string; totalPaise: number; count: number }[];
 }
 

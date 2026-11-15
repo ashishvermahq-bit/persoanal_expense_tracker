@@ -307,6 +307,21 @@
   }
 }
 
+/* Category colour (user data). Set --cat-l / --cat-d with categoryStyle()
+   (lib/color.ts: the category's own colour, nudged only where it fails 3:1),
+   add `cat`, then use var(--cat): text-[var(--cat)], bg-[var(--cat)], tints. */
+@utility cat {
+  --cat: var(--cat-l, var(--muted));
+  @variant dark {
+    --cat: var(--cat-d, var(--muted));
+  }
+}
+/* Category icon: full-strength glyph on an 18% tint of the same colour. */
+@utility cat-icon {
+  color: var(--cat);
+  background-color: color-mix(in srgb, var(--cat) 18%, transparent);
+}
+
 /* iOS notch / home-bar insets (viewport-fit=cover is set in app/layout.tsx). */
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);

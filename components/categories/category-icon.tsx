@@ -42,6 +42,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { categoryStyle } from "@/lib/color";
 import { cn } from "@/lib/cn";
 
 /** Static map keeps the bundle bounded and works in Server Components. */
@@ -97,6 +98,11 @@ export const CATEGORY_COLORS = [
   "#e11d48", "#dc2626", "#ea580c", "#f59e0b", "#a16207", "#64748b",
 ];
 
+/**
+ * The category's own colour at full strength on an 18% tint of the same colour,
+ * in both themes. lib/color.ts nudges a colour (darker on light, lighter on dark)
+ * only if it would fail 3:1 there. No colour → the muted token.
+ */
 export function CategoryIcon({
   icon,
   color,
@@ -110,20 +116,14 @@ export function CategoryIcon({
 }) {
   const Icon = (icon && CATEGORY_ICONS[icon]) || Tag;
   const dims = size === "sm" ? "size-7 [&>svg]:size-3.5" : size === "lg" ? "size-12 [&>svg]:size-6" : "size-9 [&>svg]:size-4";
-  // The category's own colour is user data (picked from CATEGORY_COLORS). The tint
-  // keeps its hue; the glyph is mixed toward the theme ink so it stays ≥3:1 on
-  // both the light and the dark surface. No colour → the muted token.
   return (
-    <span
-      aria-hidden
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--cat)_14%,transparent)] text-[color-mix(in_oklab,var(--cat)_72%,var(--ink))]",
-        dims,
-        className
-      )}
-      style={{ "--cat": color ?? "var(--muted)" } as React.CSSProperties}
-    >
+    <span aria-hidden className={cn("cat cat-icon inline-flex shrink-0 items-center justify-center rounded-full", dims, className)} style={categoryStyle(color)}>
       <Icon />
     </span>
   );
+}
+
+/** A category's colour as a small dot (lists, legends, chips). Decorative: the name is always beside it. */
+export function CategoryDot({ color, className }: { color: string | null | undefined; className?: string }) {
+  return <span aria-hidden className={cn("cat inline-block size-2.5 shrink-0 rounded-full bg-[var(--cat)]", className)} style={categoryStyle(color)} />;
 }

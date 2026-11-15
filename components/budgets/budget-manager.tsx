@@ -20,6 +20,7 @@ interface BudgetWithSpend {
   id: string;
   categoryId: string;
   categoryName: string;
+  categoryColor: string | null;
   amountPaise: number;
   spendPaise: number;
   status: "ok" | "warning" | "over";
@@ -124,7 +125,7 @@ export function BudgetManager({
           {budgets.map((b, i) => (
             <li key={b.id} className="flex animate-list-in items-center gap-2" style={{ "--i": i } as React.CSSProperties}>
               <div className="min-w-0 flex-1">
-                <BudgetMeter layout="adaptive" categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
+                <BudgetMeter layout="adaptive" color={b.categoryColor} categoryName={b.categoryName} status={b.status} spendPaise={b.spendPaise} budgetPaise={b.amountPaise} />
               </div>
               {/* Always visible: hover-only controls are unreachable on touch screens. */}
               <Button

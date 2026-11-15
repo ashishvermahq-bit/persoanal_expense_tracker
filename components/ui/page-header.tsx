@@ -14,8 +14,12 @@ export function PageHeader({ title, description, actions }: { title: string; des
 }
 
 /** Surface card: 12px radius, hairline border, soft shadow. Callers set padding (p-4 by convention). */
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <section className={cn("rounded-xl border border-line bg-surface shadow-card", className)}>{children}</section>;
+export function Card({ children, className, ...rest }: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLElement> & { "data-testid"?: string }) {
+  return (
+    <section className={cn("rounded-xl border border-line bg-surface shadow-card", className)} {...rest}>
+      {children}
+    </section>
+  );
 }
 
 /** H2 section label: 14px uppercase, tracked, muted. */

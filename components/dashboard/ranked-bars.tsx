@@ -1,6 +1,7 @@
 "use client";
 
-import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { categoryStyle } from "@/lib/color";
 import { formatPaise, formatPaiseCompact } from "@/lib/money";
 import { AXIS_TICK, ChartTable, TooltipCard, TooltipRow } from "./chart-parts";
 
@@ -9,6 +10,8 @@ export interface RankedItem {
   name: string;
   totalPaise: number;
   count: number;
+  /** Entity colour (categories): each bar wears its category's colour. Absent → one hue. */
+  color?: string | null;
 }
 
 const FILL = "var(--series-1)";
@@ -35,7 +38,7 @@ export function RankedBars({ items, label, max = 7 }: { items: RankedItem[]; lab
   const head = sorted.slice(0, max);
   const tail = sorted.slice(max);
   const data: RankedItem[] = tail.length
-    ? [...head, { key: "other", name: "Other", totalPaise: tail.reduce((s, c) => s + c.totalPaise, 0), count: tail.reduce((s, c) => s + c.count, 0) }]
+    ? [...head, { key: "other", name: "Other", totalPaise: tail.reduce((s, c) => s + c.totalPaise, 0), count: tail.reduce((s, c) => s + c.count, 0), ...(head[0]?.color !== undefined ? { color: null } : {}) }]
     : head;
   const total = data.reduce((s, d) => s + d.totalPaise, 0);
 
@@ -49,6 +52,8 @@ export function RankedBars({ items, label, max = 7 }: { items: RankedItem[]; lab
             <Tooltip content={<BarTooltip total={total} />} cursor={{ fill: "var(--raised)" }} />
             {/* ≤24px thick, 4px rounded data-end, square at the baseline. */}
             <Bar dataKey="totalPaise" fill={FILL} barSize={20} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+              {/* Colour follows the entity (category), never its rank; tones nudged only where they'd fail 3:1. */}
+              {data.map((d) => (d.color !== undefined ? <Cell key={d.key} className="cat" style={categoryStyle(d.color)} fill="var(--cat)" /> : <Cell key={d.key} fill={FILL} />))}
               <LabelList dataKey="totalPaise" position="right" offset={6} formatter={(v: unknown) => formatPaiseCompact(Number(v))} fill="var(--ink-2)" fontSize={12} />
             </Bar>
           </BarChart>

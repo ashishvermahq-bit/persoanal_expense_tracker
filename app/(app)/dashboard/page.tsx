@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { BudgetsGlance, DashboardEmpty, HeroCard, InsightChips, RecentActivity, UpcomingList } from "@/components/dashboard/glance";
+import { BudgetsGlance, DashboardEmpty, HeroCard, InsightChips, RecentActivity, TopCategories, UpcomingList } from "@/components/dashboard/glance";
 import { TrendsPanel } from "@/components/dashboard/trends-panel";
 import { Skeleton } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -64,7 +64,8 @@ async function Glance() {
                 <Upcoming />
               </Suspense>
             </div>
-            <div className="lg:col-start-1 lg:row-start-1">
+            <div className="space-y-5 lg:col-start-1 lg:row-start-1">
+              <TopCategories g={g} />
               <RecentActivity items={recent.items} />
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Check, Search, SlidersHorizontal, X } from "lucide-react";
+import { CategoryDot } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -98,10 +99,10 @@ export function FilterBar({ categories }: { categories: CategoryDTO[] }) {
   // Active filters not already shown as a selected quick chip.
   const category = categories.find((c) => c.id === sp.get("categoryId"));
   const tax = sp.get("taxSection") as TaxSection | null;
-  type Removable = { id: string; label: string; clear: Record<string, string | null> };
+  type Removable = { id: string; label: string; clear: Record<string, string | null>; color?: string | null };
   const candidates: (Removable | null)[] = [
     !presetRange && (from || to) ? { id: "range", label: `${from ? shortDate(from) : "…"} – ${to ? shortDate(to) : "…"}`, clear: { from: null, to: null } } : null,
-    category ? { id: "category", label: category.name, clear: { categoryId: null } } : null,
+    category ? { id: "category", label: category.name, clear: { categoryId: null }, color: category.color } : null,
     mode && !["upi", "cash", "credit_card"].includes(mode) ? { id: "mode", label: PAYMENT_METHOD_LABELS[mode as PaymentMethod] ?? mode, clear: { paymentMethod: null } } : null,
     tax ? { id: "tax", label: TAX_SECTION_SHORT[tax] ?? tax, clear: { taxSection: null } } : null,
     sp.get("minAmount") ? { id: "min", label: `≥ ₹${sp.get("minAmount")}`, clear: { minAmount: null } } : null,
@@ -150,6 +151,7 @@ export function FilterBar({ categories }: { categories: CategoryDTO[] }) {
         ))}
         {removable.map((r) => (
           <button key={r.id} type="button" onClick={() => update(r.clear)} className={cn(chip, "border-primary bg-primary/10 text-ink")} aria-label={`Remove filter ${r.label}`}>
+            {r.color !== undefined && <CategoryDot color={r.color} />}
             {r.label}
             <X className="size-3.5" aria-hidden />
           </button>
