@@ -52,3 +52,6 @@ next-env.d.ts
 /public/uploads/
 /.next-e2e/
 /.next-e2e-prod/
+
+# local MongoDB data for `npm run dev:local`
+/.data/

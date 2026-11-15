@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev       # Start development server (Turbopack, http://localhost:3000)
+npm run dev       # Start development server (Turbopack, http://localhost:3000); needs MONGODB_URI + AUTH_SECRET in .env.local
+npm run dev:local # Same, plus a local MongoDB on :27017 persisted in .data/ (no Mongo install needed)
 npm run build     # Production build
 npm run start     # Start production server
 npm run lint      # Run ESLint (not next lint — that was removed in Next.js 16)
