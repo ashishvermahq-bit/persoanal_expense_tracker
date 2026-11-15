@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { CATEGORY_KINDS, TAX_SECTIONS } from "@/types/models";
 import { hexColorSchema } from "./common";
 

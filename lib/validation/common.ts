@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { fromInputDate } from "@/lib/dates";
 import { toPaise } from "@/lib/money";
 

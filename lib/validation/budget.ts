@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { objectIdSchema, paiseSchema, rupeeInputSchema } from "./common";
 
 const budgetBaseSchema = z.object({

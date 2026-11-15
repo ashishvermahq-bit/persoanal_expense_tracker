@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import { INCOME_SOURCES } from "@/types/models";
 import { amountFields, dateInputSchema, optionalText } from "./common";
 
