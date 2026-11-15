@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { FileText, IndianRupee, Lock, Zap } from "lucide-react";
 import { HueIcon } from "@/components/ui/hue-icon";
 import type { Hue } from "@/lib/color";
@@ -79,6 +80,15 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
           </div>
 
           <p className="mt-5 text-center text-sm text-ink-3">{footer}</p>
+          <p className="mt-2 text-center text-xs text-ink-3">
+            <Link href="/privacy" className={legalLinkClassName}>
+              Privacy
+            </Link>
+            <span aria-hidden> · </span>
+            <Link href="/terms" className={legalLinkClassName}>
+              Terms
+            </Link>
+          </p>
           {/* Phones: a one-line mini ledger below the form (never pushes it down). */}
           <LedgerStrip className="mt-6 lg:hidden" />
         </div>
@@ -87,6 +97,7 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
   );
 }
 
-/** Footer link style shared by the login/signup pages. */
-export const authLinkClassName =
-  "rounded font-semibold text-primary-ink underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+export { authLinkClassName } from "./link-style";
+
+const legalLinkClassName =
+  "inline-flex min-h-6 items-center rounded underline-offset-4 hover:text-ink-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:min-h-11 pointer-coarse:px-1";

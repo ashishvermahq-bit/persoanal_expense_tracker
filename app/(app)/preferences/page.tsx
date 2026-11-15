@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ChevronRight, Tags } from "lucide-react";
+import { AccountSection } from "@/components/preferences/account-section";
 import { PreferencesForm } from "@/components/preferences/preferences-form";
 import { Card, PageHeader, Skeleton } from "@/components/ui/page-header";
 import { getPreferences } from "@/lib/services/preferences";
@@ -41,6 +42,7 @@ export default function PreferencesPage() {
         </span>
         <ChevronRight className="size-4 text-muted" aria-hidden />
       </Link>
+      <AccountSection />
     </div>
   );
 }

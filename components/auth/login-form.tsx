@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,17 @@ import { loginSchema } from "@/lib/validation/auth";
 import { fieldErrors } from "@/lib/validation/fields";
 import { markWelcome } from "@/components/dashboard/welcome-count-up";
 import { FormError } from "./form-error";
+import { authLinkClassName } from "./link-style";
 import { useDesktopAutofocus } from "./use-desktop-autofocus";
 
 export function LoginForm() {
-  const nextPath = useSearchParams().get("next") ?? undefined;
+  const params = useSearchParams();
+  const nextPath = params.get("next") ?? undefined;
+  const notice = params.has("reset")
+    ? "Password changed. Sign in with your new password."
+    : params.has("reauth")
+      ? "Your session ended (your password was changed or you signed out elsewhere). Please sign in again."
+      : null;
   const emailRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -54,8 +62,25 @@ export function LoginForm() {
 
   return (
     <Form onSubmit={onSubmit} noValidate className="space-y-4" data-testid="login-form">
+      {notice && !formError && (
+        <p role="status" className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success-ink">
+          {notice}
+        </p>
+      )}
       <Input ref={emailRef} label="Email" name="email" type="email" autoComplete="email" inputMode="email" required placeholder="you@example.com" error={errors.email} />
-      <PasswordInput label="Password" name="password" autoComplete="current-password" required placeholder="••••••••" error={errors.password} />
+      <PasswordInput
+        label="Password"
+        name="password"
+        autoComplete="current-password"
+        required
+        placeholder="••••••••"
+        error={errors.password}
+        labelAside={
+          <Link href="/forgot-password" className={`${authLinkClassName} text-xs`}>
+            Forgot password?
+          </Link>
+        }
+      />
       {formError && <FormError message={formError} />}
       <Button type="submit" size="lg" loading={loading} className="w-full">
         Sign in
