@@ -22,6 +22,14 @@ npm run test:e2e  # Playwright e2e in tests/e2e
 - **Every query is scoped by `userId`** and soft-deleted rows (`deletedAt !== null`) are excluded. System categories have `userId: null, isSystem: true` and are seeded by `lib/seed/categories.ts`.
 - `MonthlySummary` is a cache; recompute it after any expense/income write for the affected month rather than editing it directly.
 
+## Auth & API conventions
+
+- Session = HS256 JWT (`jose`) in an HTTP-only `session` cookie, 7-day TTL. `lib/auth/session.ts` is edge-safe and used by `proxy.ts`; `lib/auth/cookies.ts` wraps `next/headers` for server code. `getCurrentUser()` (`lib/auth/current-user.ts`) is the Server Component helper.
+- `proxy.ts` is an *optimistic* gate (signature/expiry only). Every `/api/*` route handler must still use `withAuth` from `lib/api.ts`, which verifies the cookie, connects to Mongo and hands you `{ userId }`.
+- API envelope: `{ data }` or `{ error: { code, message, fields? } }`. Throw `ApiError` inside handlers; validate bodies with `parseBody(request, zodSchema)`. Client components call routes through `api()` in `lib/client.ts`, which throws `ApiClientError` with `.fields` for inline form errors.
+- Zod v4: put `.trim().toLowerCase()` *before* format checks via `.pipe(z.email())`; map issues to fields with `fieldErrors()` (first issue per field wins).
+- Pages that read cookies / DB must render that part inside `<Suspense>` (cacheComponents). Interactive e2e tests live in `tests/e2e` and boot their own in-memory Mongo via `tests/e2e/server.mjs`; they are slow on first run because `next dev` compiles routes on demand.
+
 ## This is Next.js 16 — read the bundled docs before writing code
 
 APIs, conventions, and defaults differ significantly from Next.js 13–15. Before writing or modifying any Next.js code, read the relevant guide in `node_modules/next/dist/docs/`. Key breaking changes from Next.js 15→16:
