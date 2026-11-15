@@ -3,7 +3,7 @@ import { FileText, IndianRupee, Lock, Zap } from "lucide-react";
 import { HueIcon } from "@/components/ui/hue-icon";
 import type { Hue } from "@/lib/color";
 import { Guilloche } from "./guilloche";
-import { PassbookPreview, PassbookStrip } from "./passbook-preview";
+import { LedgerPreview, LedgerStrip } from "./ledger-preview";
 import { RupeeMedallion } from "./rupee-medallion";
 
 // Only claims the product actually backs today.
@@ -17,7 +17,7 @@ const PROOF_POINTS: { Icon: typeof IndianRupee; hue: Hue; text: string }[] = [
 /**
  * Auth layout. Phones: compact brand header, then the form card (above the fold
  * at 390×844). ≥1024px: split screen, brand panel 55% (guilloche, ₹ medallion,
- * tagline, sample ledger, proof points), form 45%, vertically centred.
+ * tagline, "living ledger" example card, proof points), form 45%, vertically centred.
  */
 export function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer: ReactNode }) {
   return (
@@ -40,7 +40,7 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
               Har rupaye ka <span className="text-primary-ink">hisaab.</span>
             </p>
             <p className="mt-2 text-lg text-ink-2">Every rupee, accounted for.</p>
-            <PassbookPreview className="mt-8 max-w-sm" />
+            <LedgerPreview className="mt-8 max-w-sm" />
           </div>
 
           <ul className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-ink-2">
@@ -79,8 +79,8 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
           </div>
 
           <p className="mt-5 text-center text-sm text-ink-3">{footer}</p>
-          {/* Phones: a one-line taste of the passbook, below the form (never pushes it down). */}
-          <PassbookStrip className="mt-6 lg:hidden" />
+          {/* Phones: a one-line mini ledger below the form (never pushes it down). */}
+          <LedgerStrip className="mt-6 lg:hidden" />
         </div>
       </main>
     </div>

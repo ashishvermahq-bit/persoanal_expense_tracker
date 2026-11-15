@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useId, useState, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
-import { AlertTriangle, Check, Circle, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, Check, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { errorClassName, fieldClassName, hintClassName, labelClassName } from "./field-styles";
 
@@ -126,7 +126,8 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(fu
             const met = r.test(value);
             return (
               <li key={r.label} className={cn("flex items-center gap-1", met ? "text-success-ink" : "text-ink-3")}>
-                {met ? <Check className="size-3.5" aria-hidden /> : <Circle className="size-3" aria-hidden />}
+                {/* Unmet: a hollow ring drawn in CSS (no extra inline SVG); met: a tick. Text says which, too. */}
+                {met ? <Check className="size-3.5" aria-hidden /> : <span aria-hidden className="mx-0.5 size-2.5 rounded-full border-[1.5px] border-current" />}
                 <span>
                   {r.label}
                   <span className="sr-only">{met ? " (done)" : " (needed)"}</span>

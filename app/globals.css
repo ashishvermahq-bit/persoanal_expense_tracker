@@ -227,10 +227,6 @@
   --animate-drift: drift 48s ease-in-out infinite alternate;
   /* Page change (template.tsx): fade + 6px rise, never blocks input. */
   --animate-page-in: page-in 0.22s var(--ease-out-soft) both;
-  /* Passbook line "typing" in left→right; stagger with --i (260ms apart). */
-  --animate-type-in: type-in 0.38s steps(18, end) calc(var(--i, 0) * 260ms + 0.2s) both;
-  /* Rubber-stamp landing: drops in, presses, settles. Delay via --i. */
-  --animate-stamp: stamp 0.4s var(--ease-out-soft) calc(var(--i, 0) * 260ms + 0.2s) both;
   /* Dashboard sections rising in, one after another: style={{ "--i": n }} (70ms apart). */
   --animate-rise: list-in 0.32s var(--ease-out-soft) calc(min(var(--i, 0), 8) * 70ms) both;
   /* Bottom-nav icon when its tab becomes active. */
@@ -284,15 +280,6 @@
   @keyframes page-in {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: none; }
-  }
-  @keyframes type-in {
-    from { clip-path: inset(0 100% 0 0); }
-    to { clip-path: inset(0 0 0 0); }
-  }
-  @keyframes stamp {
-    0% { opacity: 0; transform: scale(1.6) rotate(-14deg); }
-    65% { opacity: 1; transform: scale(0.94) rotate(-8deg); }
-    100% { opacity: 1; transform: scale(1) rotate(-8deg); }
   }
   @keyframes tab-pop {
     0% { transform: scale(0.8); }

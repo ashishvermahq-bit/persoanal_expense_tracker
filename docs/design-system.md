@@ -67,8 +67,7 @@ semantic tokens. `white` is remapped to `#fcfcfb` (the light surface).
     Light: the smallest darkening that clears 3:1 on its own tint (orange 10%, aqua 16%, yellow 26%, magenta
     18%); tested in `tests/unit/color.test.ts`.
   - Upcoming payments wear their rule's category icon + colour.
-  - The login passbook uses series tokens the same way (Kirana aqua, Rent violet, Food orange). Light aqua is
-    2.74:1 on the card, so it's mixed 6% toward black (3.07:1); the others pass as-is.
+  - The login ledger card uses series hues the same way (Rent violet, Kirana aqua, UPI payments blue) via `hueStyle()`.
 
 ### Type
 
@@ -147,8 +146,6 @@ All motion is CSS (`@theme` keyframes in `globals.css`). No animation library.
 | Drift | `animate-drift` | 48s ease-in-out ∞ alternate | translate ≤3px | auth guilloche background |
 | Draw | `animate-draw` (path needs `pathLength="1"` + `stroke-dasharray="1"`) | 0.9s ease-out, 0.25s delay, once | stroke-dashoffset 1→0 | one-off line draws |
 | Page in | `animate-page-in` | 0.22s ease-out-soft | fade + 6px rise; ends at `transform: none` | `app/(app)/template.tsx` on every navigation |
-| Type in | `animate-type-in` + `--i` | 0.38s steps(18), +260ms per line | clip-path reveal left→right | auth passbook lines |
-| Stamp | `animate-stamp` + `--i` | 0.4s ease-out-soft | scale 1.6→0.94→1, rotate to −8° | "Hisaab complete" seal |
 | Success pop | `animate-success-pop` | 0.36s ease-back | scale 0.6→1.12→1 | quick-add saved tick (with `navigator.vibrate(12)` where supported) |
 | Nav pill | transform + background transition | 0.3s ease-out-soft | one pill slides between tab slots, its tint cross-fading to the tab's hue | mobile bottom nav |
 | Tab pop | `animate-tab-pop` | 0.32s ease-back | scale 0.8→1.12→1, once when a tab becomes active | bottom-nav icons |
@@ -177,8 +174,8 @@ screen, brand panel 55% / form 45%.
 |---|---|---|
 | Guilloche | `guilloche.tsx` | Original abstract rosettes + sine band (no currency, emblem or logo). Nested `<use>` keeps it ~1.5 KB; `text-primary` at 9% (light) / 14% (dark). Needs a unique `idPrefix` per instance. Drifts ≤3px over 48s. |
 | ₹ medallion | `rupee-medallion.tsx` | Primary-tinted coin with a dotted "milled" edge; bounces in once, then breathes. |
-| Passbook strip (phones) | `passbook-preview.tsx` → `PassbookStrip` | one line under the form: "Example" + three coloured dots with amounts; never pushes the form down. |
-| Passbook preview | `passbook-preview.tsx` | "Paisa passbook": ruled stub (date · particulars · debit · balance) with balance b/f, three debits that type in, a closing balance that ticks down (width reserved), and a "Hisaab complete" stamp. Labelled "Example" + "Sample data"; `role="img"` one-line summary. No SVG beyond one icon. Chosen over a gullak (saving isn't the core job) and a UPI-receipt stack ("auto-sorted" would claim a feature Paisa doesn't have). |
+| Ledger strip (phones) | `ledger-preview.tsx` → `LedgerStrip` | one line under the form: "Example · ₹24,350 spent this month · Kirana 82% used" (warning icon + label); never pushes the form down. |
+| Ledger preview | `ledger-preview.tsx` | "Example: your month at a glance" + "Sample data"; `role="img"` one-line summary. ₹0 → ₹24,350 count-up (~900ms, width reserved by a pseudo-element), 2px sparkline draw-in, rows Rent / Kirana / UPI payments with thin bars in their hues (`animate-list-in` stagger), Kirana budget meter at "82% used". Runs once, never loops. (Briefly replaced by a "passbook" card; restored to follow the auth brief exactly.) |
 | Password field | `ui/password-input.tsx` | Show/hide (`aria-pressed`, one toggle can drive several fields), Caps Lock warning, optional requirements checklist that mirrors `passwordSchema` (icon + text + sr-only state). |
 
 Inline SVG on an auth page, icons included, is 4.1 KB (login) / 4.9 KB (signup):
@@ -282,7 +279,6 @@ Contrast, measured on the card surface (`#fcfcfb` light / `#1a1a19` dark):
 
 | Brief said | Shipped | Why |
 |---|---|---|
-| Ledger rows "Kirana, Rent, UPI payments" | Rent, Kirana, Food & dining | UPI is a payment mode in this app, not a category; mixing the two would misteach the model |
 | Autofocus email on desktop | email on login; Full name on signup (desktop only) | it's the first field of the signup form |
 | SVG < 6 KB | custom art ~4 KB; Lucide icons add ~2.5 KB more | icons are the shared icon set used app-wide |
 | Keep "Forgot password?" | removed | it linked to `#`; password reset isn't built (needs an email provider) |
