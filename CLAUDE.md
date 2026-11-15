@@ -14,6 +14,7 @@ npm run typecheck # tsc --noEmit (run `npx next typegen` first if LayoutProps/Pa
 npm test          # Vitest unit tests in tests/unit (model tests spin up mongodb-memory-server)
 npm run test:e2e  # Playwright e2e in tests/e2e against `next dev` (on-demand compiles can make it flaky on slow machines)
 npm run test:e2e:prod # same suite against `next build` + `next start`: stable timings, use this before committing
+# Env vars: see .env.example / README (MONGODB_URI, AUTH_SECRET ≥32, APP_URL, CRON_SECRET); validated at boot in instrumentation.ts
 ```
 
 ## Domain conventions (do not break these)
@@ -40,7 +41,12 @@ npm run test:e2e:prod # same suite against `next build` + `next start`: stable t
 ## Auth & API conventions
 
 - Session = HS256 JWT (`jose`) in an HTTP-only `session` cookie, 7-day TTL. `lib/auth/session.ts` is edge-safe and used by `proxy.ts`; `lib/auth/cookies.ts` wraps `next/headers` for server code. `getCurrentUser()` (`lib/auth/current-user.ts`) is the Server Component helper.
-- `proxy.ts` is an *optimistic* gate (signature/expiry only). Every `/api/*` route handler must still use `withAuth` from `lib/api.ts`, which verifies the cookie, connects to Mongo and hands you `{ userId }`.
+- `proxy.ts` is an *optimistic* gate (signature/expiry only) and the CSRF guard (cross-site POST/PATCH/PUT/DELETE to `/api/*` → 403, `lib/auth/origin.ts`). Every `/api/*` route handler must still use `withAuth` from `lib/api.ts`, which verifies the cookie **and that the session isn't revoked** (`verifiedSession()`: the JWT's `sv` must equal `user.sessionVersion`; bumped on password change/reset), connects to Mongo and hands you `{ userId }`. Pages use `requireUserId()`, which does the same.
+- New public routes must be added to `PUBLIC_API` / `OPEN_PAGES` in `proxy.ts`. Static files are excluded by the matcher; never let it redirect `/manifest.json`, icons or `sw.js`.
+- Route `[id]` params: `idParam(id)` (malformed → 404, never a 500). Any category id from a client goes through `assertUsableCategory()` (system or the user's own).
+- Receipts live in MongoDB (`models/receipt.ts`) and are served only to their owner via `/api/receipts/<id>.<ext>`; `receiptUrl` must match `RECEIPT_URL_PATTERN`.
+- CSV output goes through `csvRow()` (`lib/csv.ts`: quoting + formula-injection guard); HTML exports through `escapeHtml()`. Log errors with `redactForLog()` (no emails/tokens).
+- Security headers/CSP live in `next.config.ts`. `script-src` keeps `'unsafe-inline'` because PPR shells can't carry nonces; don't add `dangerouslySetInnerHTML` with user data.
 - API envelope: `{ data }` or `{ error: { code, message, fields? } }`. Throw `ApiError` inside handlers; validate bodies with `parseBody(request, zodSchema)`. Client components call routes through `api()` in `lib/client.ts`, which throws `ApiClientError` with `.fields` for inline form errors.
 - Zod v4: put `.trim().toLowerCase()` *before* format checks via `.pipe(z.email())`; map issues to fields with `fieldErrors()` (first issue per field wins).
 - **Services, not inline queries.** Business logic lives in `lib/services/*` (`expenses`, `income`, `categories`, `preferences`) and returns plain DTOs from `types/dto.ts`. Route handlers under `app/api/*` and Server Components both call the same service functions; pages get the user via `requireUserId()` (`lib/services/context.ts`). Any expense/income write must go through the service so `recomputeForDates()` keeps `MonthlySummary` fresh.
