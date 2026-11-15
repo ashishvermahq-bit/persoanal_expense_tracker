@@ -1,175 +1,146 @@
 import "server-only";
 import { Types } from "mongoose";
+import { csvRow, escapeHtml } from "@/lib/csv";
+import { currentYearMonthIST, formatDateIN, fyRange, monthRange } from "@/lib/dates";
+import { formatRupeesPlain } from "@/lib/money";
+import { Category } from "@/models/category";
 import { Expense } from "@/models/expense";
 import { Income } from "@/models/income";
-import { Category } from "@/models/category";
-import { formatRupeesPlain } from "@/lib/money";
-import { formatDateIN, monthRange, fyRange, currentYearMonthIST } from "@/lib/dates";
 
-interface ExportOptions {
+export interface ExportOptions {
   month?: number;
   year?: number;
   fy?: number; // financial year start year (e.g., 2025 for FY 2025-26)
   includeTaxSummary?: boolean;
 }
 
-/**
- * Generate CSV export for expenses and income.
- */
-export async function exportToCSV(userId: Types.ObjectId | string, options: ExportOptions): Promise<string> {
-  const userObjectId = typeof userId === "string" ? new Types.ObjectId(userId) : userId;
-  const now = currentYearMonthIST();
+interface Section {
+  heading: string;
+  columns: string[];
+  rows: unknown[][];
+}
 
-  let startDate: Date;
-  let endDate: Date;
-  let title: string;
+interface Report {
+  title: string;
+  sections: Section[];
+}
 
+const EXPENSE_COLUMNS = ["Date", "Category", "Amount (₹)", "Payment Method", "Description", "Merchant", "Tags", "Notes"];
+const INCOME_COLUMNS = ["Date", "Source", "Amount (₹)", "Description"];
+const SECTION_80C_CAP_PAISE = 1_50_000_00;
+
+function toObjectId(id: Types.ObjectId | string): Types.ObjectId {
+  return typeof id === "string" ? new Types.ObjectId(id) : id;
+}
+
+function periodOf(options: ExportOptions): { start: Date; end: Date; title: string } {
   if (options.fy) {
-    // Financial year: Apr start_year to Mar (start_year + 1)
-    const range = fyRange(options.fy);
-    startDate = range.start;
-    endDate = range.end;
-    title = `FY ${options.fy}-${options.fy + 1} Export`;
-  } else if (options.month && options.year) {
-    const range = monthRange(options.year, options.month);
-    startDate = range.start;
-    endDate = range.end;
-    title = `${options.year}-${String(options.month).padStart(2, "0")} Export`;
-  } else {
-    const range = monthRange(now.year, now.month);
-    startDate = range.start;
-    endDate = range.end;
-    title = `${now.year}-${String(now.month).padStart(2, "0")} Export`;
+    const { start, end } = fyRange(options.fy);
+    return { start, end, title: `FY ${options.fy}-${String((options.fy + 1) % 100).padStart(2, "0")} Export` };
   }
-
-  // Fetch expenses
-  const expenses = await Expense.find({
-    userId: userObjectId,
-    date: { $gte: startDate, $lt: endDate },
-    deletedAt: null,
-  })
-    .sort({ date: -1 })
-    .lean();
-
-  // Fetch categories
-  const categoryIds = [...new Set(expenses.map((e) => e.categoryId))];
-  const categories = await Category.find({ _id: { $in: categoryIds } }).lean();
-  const categoryMap = new Map(categories.map((c) => [c._id.toString(), c.name]));
-
-  // Fetch income
-  const income = await Income.find({
-    userId: userObjectId,
-    date: { $gte: startDate, $lt: endDate },
-    deletedAt: null,
-  })
-    .sort({ date: -1 })
-    .lean();
-
-  // Build CSV
-  let csv = `${title}\n\n`;
-  csv += "EXPENSES\n";
-  csv += "Date,Category,Amount (₹),Payment Method,Description,Merchant,Tags,Notes\n";
-
-  for (const exp of expenses) {
-    const categoryName = categoryMap.get(exp.categoryId.toString()) || "Unknown";
-    const amount = formatRupeesPlain(exp.amountPaise);
-    const tags = (exp.tags || []).join("; ");
-    csv += [
-      formatDateIN(exp.date),
-      `"${categoryName}"`,
-      amount,
-      exp.paymentMethod,
-      `"${exp.description || ""}"`,
-      `"${exp.merchant || ""}"`,
-      `"${tags}"`,
-      `"${exp.notes || ""}"`,
-    ].join(",");
-    csv += "\n";
-  }
-
-  csv += `\nINCOME\n`;
-  csv += "Date,Source,Amount (₹),Description\n";
-
-  for (const inc of income) {
-    const amount = formatRupeesPlain(inc.amountPaise);
-    csv += [
-      formatDateIN(inc.date),
-      inc.source,
-      amount,
-      `"${inc.description || ""}"`,
-    ].join(",");
-    csv += "\n";
-  }
-
-  // Tax summary
-  if (options.includeTaxSummary && options.fy) {
-    csv += "\nTAX SUMMARY (Informational - Not Tax Advice)\n";
-    csv += "Section,Total Amount (₹)\n";
-
-    const fyExpenses = expenses.filter((e) => {
-      const d = new Date(e.date);
-      const fy = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
-      return fy === options.fy;
-    });
-
-    const by80C = fyExpenses
-      .filter((e) => e.taxSection === "80C")
-      .reduce((sum, e) => sum + e.amountPaise, 0);
-    const by80D = fyExpenses
-      .filter((e) => e.taxSection === "80D")
-      .reduce((sum, e) => sum + e.amountPaise, 0);
-    const byHRA = fyExpenses
-      .filter((e) => e.taxSection === "HRA")
-      .reduce((sum, e) => sum + e.amountPaise, 0);
-
-    csv += `"80C (cap ₹1,50,000)",${formatRupeesPlain(Math.min(by80C, 15000000))}\n`;
-    csv += `"80D",${formatRupeesPlain(by80D)}\n`;
-    csv += `"HRA (if claiming)",${formatRupeesPlain(byHRA)}\n`;
-  }
-
-  return csv;
+  const { year, month } = options.month && options.year ? { year: options.year, month: options.month } : currentYearMonthIST();
+  const { start, end } = monthRange(year, month);
+  return { start, end, title: `${year}-${String(month).padStart(2, "0")} Export` };
 }
 
 /**
- * Generate PDF export (returns HTML that can be printed to PDF).
- * Uses basic HTML table format suitable for browser print.
+ * One report model, rendered as CSV or HTML. Every query is scoped by userId and
+ * excludes soft-deleted rows; amounts stay integer paise until formatted.
  */
-export async function exportToPDFHTML(userId: Types.ObjectId | string, options: ExportOptions): Promise<string> {
-  const csv = await exportToCSV(userId, options);
-  const lines = csv.split("\n");
+async function buildReport(userId: Types.ObjectId | string, options: ExportOptions): Promise<Report> {
+  const uid = toObjectId(userId);
+  const { start, end, title } = periodOf(options);
+  const range = { $gte: start, $lt: end };
 
-  // Simple HTML table from CSV
-  const html = `
-<!DOCTYPE html>
-<html>
+  const [expenses, income] = await Promise.all([
+    Expense.find({ userId: uid, date: range, deletedAt: null }).sort({ date: -1 }).lean(),
+    Income.find({ userId: uid, date: range, deletedAt: null }).sort({ date: -1 }).lean(),
+  ]);
+  const categoryIds = [...new Set(expenses.map((e) => e.categoryId.toHexString()))].map((h) => new Types.ObjectId(h));
+  const categories = await Category.find({ _id: { $in: categoryIds } }, { name: 1 }).lean();
+  const names = new Map(categories.map((c) => [c._id.toHexString(), c.name]));
+
+  const sections: Section[] = [
+    {
+      heading: "Expenses",
+      columns: EXPENSE_COLUMNS,
+      rows: expenses.map((e) => [
+        formatDateIN(e.date),
+        names.get(e.categoryId.toHexString()) ?? "Unknown",
+        formatRupeesPlain(e.amountPaise),
+        e.paymentMethod,
+        e.description ?? "",
+        e.merchant ?? "",
+        (e.tags ?? []).join("; "),
+        e.notes ?? "",
+      ]),
+    },
+    {
+      heading: "Income",
+      columns: INCOME_COLUMNS,
+      rows: income.map((i) => [formatDateIN(i.date), i.source, formatRupeesPlain(i.amountPaise), i.description ?? ""]),
+    },
+  ];
+
+  // The FY range above already bounds the rows (IST), so no per-row date maths here.
+  if (options.includeTaxSummary && options.fy) {
+    const sum = (section: string) => expenses.filter((e) => e.taxSection === section).reduce((s, e) => s + e.amountPaise, 0);
+    sections.push({
+      heading: "Tax summary (informational, not tax advice)",
+      columns: ["Section", "Total Amount (₹)"],
+      rows: [
+        ["80C (cap ₹1,50,000)", formatRupeesPlain(Math.min(sum("80C"), SECTION_80C_CAP_PAISE))],
+        ["80D", formatRupeesPlain(sum("80D"))],
+        ["HRA (if claiming)", formatRupeesPlain(sum("HRA"))],
+      ],
+    });
+  }
+
+  return { title, sections };
+}
+
+export function reportToCSV(report: Report): string {
+  const lines = [csvRow([report.title]), ""];
+  for (const s of report.sections) {
+    lines.push(csvRow([s.heading.toUpperCase()]), csvRow(s.columns), ...s.rows.map(csvRow), "");
+  }
+  return lines.join("\r\n");
+}
+
+/** Printable HTML (save as PDF from the browser). All user text is escaped. */
+export function reportToHTML(report: Report): string {
+  const table = (s: Section) => `
+  <h2>${escapeHtml(s.heading)}</h2>
+  <table>
+    <thead><tr>${s.columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>
+    <tbody>${s.rows.length ? s.rows.map((r) => `<tr>${r.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${s.columns.length}">None</td></tr>`}</tbody>
+  </table>`;
+  return `<!DOCTYPE html>
+<html lang="en-IN">
 <head>
   <meta charset="utf-8">
-  <title>Export</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+  <title>${escapeHtml(report.title)}</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { font-size: 20px; margin-bottom: 10px; }
-    h2 { font-size: 14px; margin-top: 20px; margin-bottom: 10px; }
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    h1 { font-size: 20px; } h2 { font-size: 14px; margin-top: 20px; }
     table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background-color: #f5f5f5; font-weight: bold; }
-    .amount { text-align: right; }
+    th { background-color: #f5f5f5; }
     @media print { body { margin: 0; } }
   </style>
 </head>
 <body>
-  <h1>${lines[0]}</h1>
-  ${lines
-    .slice(1)
-    .join("\n")
-    .replace(/\n\n/g, "</table><h2>")
-    .replace(/([A-Z][A-Z\s]*)\n/g, "<h2>$1</h2><table><tr><th>")
-    .replace(/\n/g, "</tr><tr><td>")
-    .replace(/,/g, "</td><td>")
-    .replace(/<\/tr><\/tr>/g, "</tr>")}
-</table>
+  <h1>${escapeHtml(report.title)}</h1>${report.sections.map(table).join("")}
 </body>
 </html>
 `;
+}
 
-  return html;
+export async function exportToCSV(userId: Types.ObjectId | string, options: ExportOptions): Promise<string> {
+  return reportToCSV(await buildReport(userId, options));
+}
+
+export async function exportToPDFHTML(userId: Types.ObjectId | string, options: ExportOptions): Promise<string> {
+  return reportToHTML(await buildReport(userId, options));
 }

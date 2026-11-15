@@ -1,36 +1,34 @@
-import { withAuth } from "@/lib/api";
-import { exportToCSV, exportToPDFHTML } from "@/lib/services/export";
+import { z } from "zod";
+import { parseWith, withAuth } from "@/lib/api";
 import { searchParamsToObject } from "@/lib/query";
+import { exportToCSV, exportToPDFHTML } from "@/lib/services/export";
+
+const exportQuery = z
+  .object({
+    format: z.enum(["csv", "pdf"]).default("csv"),
+    month: z.coerce.number().int().min(1).max(12).optional(),
+    year: z.coerce.number().int().min(2000).max(2100).optional(),
+    fy: z.coerce.number().int().min(2000).max(2100).optional(),
+    includeTaxSummary: z.enum(["true", "false"]).optional().transform((v) => v === "true"),
+  })
+  .refine((q) => (q.month === undefined) === (q.year === undefined), { path: ["month"], message: "Give both month and year" });
 
 export const GET = withAuth(async (request, _ctx, { userId }) => {
-  const url = new URL(request.url);
-  const params = searchParamsToObject(url.searchParams);
+  const { format, ...options } = parseWith(exportQuery, searchParamsToObject(new URL(request.url).searchParams));
 
-  const format = (params.format as string) || "csv"; // csv or pdf
-  const month = params.month ? parseInt(params.month as string) : undefined;
-  const year = params.year ? parseInt(params.year as string) : undefined;
-  const fy = params.fy ? parseInt(params.fy as string) : undefined;
-  const includeTaxSummary = params.includeTaxSummary === "true";
-
-  try {
-    if (format === "pdf") {
-      const html = await exportToPDFHTML(userId, { month, year, fy, includeTaxSummary });
-      return new Response(html, {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Content-Disposition": `attachment; filename="export.html"`,
-        },
-      });
-    } else {
-      const csv = await exportToCSV(userId, { month, year, fy, includeTaxSummary });
-      return new Response(csv, {
-        headers: {
-          "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="export.csv"`,
-        },
-      });
-    }
-  } catch {
-    return new Response("Export failed", { status: 500 });
+  if (format === "pdf") {
+    return new Response(await exportToPDFHTML(userId, options), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Disposition": `attachment; filename="paisa-export.html"`,
+      },
+    });
   }
+  // BOM so Excel reads ₹ and Indian names as UTF-8.
+  return new Response("﻿" + (await exportToCSV(userId, options)), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="paisa-export.csv"`,
+    },
+  });
 });

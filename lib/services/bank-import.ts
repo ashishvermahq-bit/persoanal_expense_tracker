@@ -1,15 +1,21 @@
 import "server-only";
+import Papa from "papaparse";
 import { Types } from "mongoose";
 import { fromInputDate } from "@/lib/dates";
 import { toPaise } from "@/lib/money";
 import type { CreateExpenseInput } from "@/lib/validation/expense";
 import type { PaymentMethod, TaxSection } from "@/types/models";
+import { assertUsableCategory } from "./categories";
 import { createExpense } from "./expenses";
 
+/** Upload guards: Vercel caps request bodies at 4.5 MB anyway; statements are far smaller. */
+export const IMPORT_MAX_BYTES = 1024 * 1024;
+export const IMPORT_MAX_ROWS = 2000;
+
 interface BankTransaction {
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD (IST civil date)
   description: string;
-  amount: number; // positive for expenses, negative for income (or reversed by bank)
+  amount: string; // rupees as text; positive for expenses, negative for credits
   merchant?: string;
   reference?: string;
 }
@@ -29,30 +35,25 @@ const PAYMENT_METHOD_PATTERNS: Record<string, PaymentMethod> = {
  * Expected columns: Date, Description, Amount, Balance (minimal support)
  * Returns extracted transactions.
  */
-export function parseCSV(csvContent: string): BankTransaction[] {
-  const lines = csvContent.trim().split("\n");
-  if (lines.length < 2) return [];
-
-  // Skip header row (line 0)
+export function parseCSV(csvContent: string, maxRows = IMPORT_MAX_ROWS): BankTransaction[] {
+  // A real CSV parser: bank exports quote descriptions that contain commas.
+  const { data } = Papa.parse<string[]>(csvContent.trim(), { skipEmptyLines: true });
   const transactions: BankTransaction[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const row = lines[i].split(",").map((v) => v.trim());
+  // Skip the header row.
+  for (const raw of data.slice(1, maxRows + 1)) {
+    const row = raw.map((v) => (v ?? "").trim());
     if (row.length < 3) continue;
 
-    const [dateStr, description, amountStr] = row;
+    const [dateStr, description, amountStr] = row as [string, string, string];
     const date = parseDate(dateStr);
     if (!date) continue;
 
-    const amount = parseFloat(amountStr);
-    if (isNaN(amount)) continue;
+    // Keep the typed text (no float round-trip); "1,250.50" → "1250.50".
+    const amount = amountStr.replace(/[₹,\s]/g, "");
+    if (!/^-?\d+(\.\d{1,2})?$/.test(amount)) continue;
 
-    transactions.push({
-      date: date.toISOString().split("T")[0],
-      description,
-      amount,
-      merchant: extractMerchant(description),
-    });
+    transactions.push({ date, description, amount, merchant: extractMerchant(description) });
   }
 
   return transactions;
@@ -68,20 +69,20 @@ export function parseSMS(smsText: string): BankTransaction | null {
   if (!dateMatch) return null;
 
   const [, day, month, year] = dateMatch;
-  const date = new Date(`${year}-${month}-${day}T00:00:00`);
-  if (isNaN(date.getTime())) return null;
+  const date = `${year}-${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`;
+  if (!fromInputDate(date)) return null;
 
   // Extract amount
   const amountMatch = smsText.match(/(?:by|of|₹)\s*(\d+(?:\.\d{2})?)/i);
   if (!amountMatch) return null;
 
-  const amount = parseFloat(amountMatch[1]);
+  const amount = amountMatch[1]!;
   const isDebit = /debit|withdraw/i.test(smsText);
 
   return {
-    date: date.toISOString().split("T")[0],
+    date,
     description: smsText.substring(0, 100),
-    amount: isDebit ? amount : -amount,
+    amount: isDebit ? amount : `-${amount}`,
     merchant: extractMerchant(smsText),
   };
 }
@@ -97,14 +98,16 @@ export async function importTransactions(
   paymentMethod: PaymentMethod = "debit_card"
 ): Promise<{ imported: number; skipped: number; errors: string[] }> {
   const userObjectId = typeof userId === "string" ? new Types.ObjectId(userId) : userId;
+  // Validates ownership once (system or the user's own category) instead of failing every row.
+  const category = await assertUsableCategory(userObjectId, categoryId);
   let imported = 0;
   let skipped = 0;
   const errors: string[] = [];
 
-  for (const tx of transactions) {
+  for (const [i, tx] of transactions.entries()) {
     try {
       // Credits (negative amounts) aren't expenses; skip rather than fail validation.
-      if (tx.amount <= 0) {
+      if (tx.amount.startsWith("-") || toPaise(tx.amount) <= 0) {
         skipped++;
         continue;
       }
@@ -112,7 +115,7 @@ export async function importTransactions(
       if (!date) throw new Error(`Invalid date: ${tx.date}`);
       const input: CreateExpenseInput = {
         amountPaise: toPaise(tx.amount),
-        categoryId,
+        categoryId: category.toHexString(),
         date,
         paymentMethod,
         upiApp: null,
@@ -123,9 +126,10 @@ export async function importTransactions(
       };
       await createExpense(userObjectId, input);
       imported++;
-    } catch (err) {
+    } catch {
+      // Row number only: raw error text can carry database details.
       skipped++;
-      if (err instanceof Error) errors.push(err.message);
+      errors.push(`Row ${i + 2}: couldn't import`);
     }
   }
 
@@ -133,17 +137,11 @@ export async function importTransactions(
 }
 
 // Helpers
-function parseDate(dateStr: string): Date | null {
-  // Try DD/MM/YYYY
-  const dmy = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (dmy) {
-    return new Date(`${dmy[3]}-${dmy[2]}-${dmy[1]}`);
-  }
-  // Try YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return new Date(dateStr);
-  }
-  return null;
+/** DD/MM/YYYY or YYYY-MM-DD → "yyyy-mm-dd", only if it's a real calendar date. */
+function parseDate(dateStr: string): string | null {
+  const dmy = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(dateStr);
+  const iso = dmy ? `${dmy[3]}-${dmy[2]!.padStart(2, "0")}-${dmy[1]!.padStart(2, "0")}` : /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : null;
+  return iso && fromInputDate(iso) ? iso : null;
 }
 
 function extractMerchant(text: string): string {
