@@ -29,6 +29,7 @@ const env = {
   NEXT_DIST_DIR: prod ? ".next-e2e-prod" : ".next-e2e",
   // Every spec signs up from 127.0.0.1; the production limit (10/15 min) would trip mid-suite.
   AUTH_RATE_LIMIT_MAX: "1000",
+  APP_URL: `http://localhost:${port}`,
   NODE_ENV: prod ? "production" : "development",
 };
 
