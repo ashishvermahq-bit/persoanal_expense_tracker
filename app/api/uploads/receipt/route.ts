@@ -1,8 +1,13 @@
 import { ApiError, ok, withAuth } from "@/lib/api";
-import { putReceipt, RECEIPT_MAX_BYTES, RECEIPT_TYPES, sniffReceiptType } from "@/lib/storage";
+import { hitRateLimit } from "@/lib/auth/rate-limit";
+import { putReceipt, RECEIPT_MAX_BYTES, RECEIPT_QUOTA_BYTES, RECEIPT_TYPES, receiptBytesUsed, sniffReceiptType } from "@/lib/storage";
 
 /** multipart/form-data with a single `file` field → `{ url }`. */
 export const POST = withAuth(async (request, _ctx, { userId }) => {
+  const rl = await hitRateLimit(`receipt:user:${userId.toHexString()}`, { limit: 30, windowSeconds: 60 * 60 });
+  if (!rl.allowed) {
+    throw new ApiError("RATE_LIMITED", "Too many uploads. Try again later.", undefined, { "Retry-After": String(rl.retryAfterSeconds) });
+  }
   let form: FormData;
   try {
     form = await request.formData();
@@ -19,6 +24,9 @@ export const POST = withAuth(async (request, _ctx, { userId }) => {
   const type = sniffReceiptType(bytes);
   if (!type || !RECEIPT_TYPES[type]) {
     throw new ApiError("VALIDATION", "Only JPG, PNG, WebP or PDF receipts are supported", { file: "Unsupported file type" });
+  }
+  if ((await receiptBytesUsed(userId)) + bytes.byteLength > RECEIPT_QUOTA_BYTES) {
+    throw new ApiError("VALIDATION", "Receipt storage is full (50 MB). Remove receipts from old expenses to add more.", { file: "Receipt storage is full" });
   }
   const stored = await putReceipt(userId, { bytes, contentType: type });
   return ok({ url: stored.url }, { status: 201 });

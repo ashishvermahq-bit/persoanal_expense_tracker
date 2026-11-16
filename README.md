@@ -42,7 +42,8 @@ Checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e:prod`
    - Add your domain in Resend → Domains and create the DNS records it lists (SPF, DKIM, and optionally DMARC) at your DNS provider. Wait until it shows *Verified*.
    - Create an API key with **Sending access** only, restricted to that domain, and put it in `RESEND_API_KEY`.
    - Use an address on that domain as `EMAIL_FROM`. The app checks both at boot and refuses to start if only one is set.
-4. **Cron**: `vercel.json` schedules `/api/cron/recurring` daily at 00:30 UTC (06:00 IST). Vercel sends `Authorization: Bearer $CRON_SECRET` automatically.
+4. **Cron**: `vercel.json` schedules `/api/cron/recurring` daily at 00:30 UTC (06:00 IST). Vercel sends `Authorization: Bearer $CRON_SECRET` automatically. The same run deletes receipts no expense uses (after a 24-hour grace period; receipts of deleted-but-undoable expenses are kept).
+   - **Storage**: receipts are stored in MongoDB, capped at 4 MB each, 50 MB per user and 30 uploads per hour. Atlas M0 holds 512 MB in total, so move to a paid tier (or a bucket behind `lib/storage.ts`) before you have many users who attach receipts.
 5. **Indexes**: Mongoose creates the schema indexes on first connect, including the unique email index, `{userId, deletedAt, date}`, `{userId, categoryId, date}`, and the TTL indexes for rate limits and reset tokens. Check them in Atlas → Collections → Indexes after the first sign-up.
 6. **Smoke test** after each deploy (see below).
 

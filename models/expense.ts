@@ -38,6 +38,8 @@ expenseSchema.index({ userId: 1, deletedAt: 1, date: -1 });
 expenseSchema.index({ userId: 1, categoryId: 1, date: -1 });
 expenseSchema.index({ userId: 1, taxSection: 1, date: -1 });
 expenseSchema.index({ userId: 1, recurringRuleId: 1, date: -1 }, { sparse: true });
+// Daily orphan-receipt cleanup looks expenses up by receiptUrl; only rows with one are indexed.
+expenseSchema.index({ receiptUrl: 1 }, { partialFilterExpression: { receiptUrl: { $type: "string" } } });
 // Free-text search across the human-written fields.
 expenseSchema.index(
   { description: "text", merchant: "text", notes: "text", tags: "text" },

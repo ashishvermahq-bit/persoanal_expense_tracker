@@ -3,8 +3,9 @@ import { cronAuthorized } from "@/lib/auth/cron";
 import { connectDB } from "@/lib/db";
 import { redactForLog } from "@/lib/log";
 import { generateRecurringEntries, usersWithDueRules } from "@/lib/services/recurring";
+import { pruneOrphanReceipts } from "@/lib/storage";
 
-/** Vercel Cron calls this daily (vercel.json) with `Authorization: Bearer $CRON_SECRET`. */
+/** Vercel Cron calls this daily: generates due recurring entries, then prunes orphan receipts. Called (vercel.json) with `Authorization: Bearer $CRON_SECRET`. */
 export const maxDuration = 60;
 
 export const GET = withApi(async (request) => {
@@ -27,5 +28,12 @@ export const GET = withApi(async (request) => {
       console.error("[cron/recurring] user run failed", redactForLog(err));
     }
   }
-  return ok({ users: users.length, generated, failedUsers });
+  // Same daily job (Vercel Hobby allows few crons): drop receipts no expense uses.
+  let prunedReceipts = 0;
+  try {
+    prunedReceipts = await pruneOrphanReceipts(now);
+  } catch (err) {
+    console.error("[cron/recurring] receipt cleanup failed", redactForLog(err));
+  }
+  return ok({ users: users.length, generated, failedUsers, prunedReceipts });
 });

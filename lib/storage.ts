@@ -35,6 +35,30 @@ export function sniffReceiptType(bytes: Uint8Array): string | null {
   return null;
 }
 
+/** Per-user cap on stored receipt bytes (Atlas storage is shared; M0 is 512 MB in total). */
+export const RECEIPT_QUOTA_BYTES = 50 * 1024 * 1024;
+
+export async function receiptBytesUsed(userId: Types.ObjectId): Promise<number> {
+  const [row] = await Receipt.aggregate<{ total: number }>([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$size" } } }]);
+  return row?.total ?? 0;
+}
+
+/**
+ * Delete receipts that no expense points at (uploaded then abandoned, or removed from
+ * an expense), once they're older than `graceMs` so an in-progress form isn't robbed.
+ * Receipts of soft-deleted expenses are kept so "Undo" restores them.
+ */
+export async function pruneOrphanReceipts(now: Date = new Date(), graceMs = 24 * 60 * 60 * 1000, batch = 500): Promise<number> {
+  const { Expense } = await import("@/models/expense");
+  const candidates = await Receipt.find({ createdAt: { $lt: new Date(now.getTime() - graceMs) } }, { _id: 1, contentType: 1 }).limit(batch).lean();
+  if (candidates.length === 0) return 0;
+  const urlOf = (r: { _id: Types.ObjectId; contentType: string }) => `/api/receipts/${r._id.toHexString()}.${RECEIPT_TYPES[r.contentType] ?? "bin"}`;
+  const referenced = new Set<string>(await Expense.distinct("receiptUrl", { receiptUrl: { $in: candidates.map(urlOf) } }));
+  const orphans = candidates.filter((r) => !referenced.has(urlOf(r))).map((r) => r._id);
+  if (orphans.length) await Receipt.deleteMany({ _id: { $in: orphans } });
+  return orphans.length;
+}
+
 export async function putReceipt(userId: Types.ObjectId, file: { bytes: Uint8Array; contentType: string }): Promise<StoredFile> {
   const ext = RECEIPT_TYPES[file.contentType];
   if (!ext) throw new Error(`Unsupported content type ${file.contentType}`);
