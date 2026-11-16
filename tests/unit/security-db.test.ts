@@ -224,3 +224,68 @@ describe("account export and deletion (DPDP)", () => {
     expect(await Category.countDocuments({ isSystem: true })).toBeGreaterThan(0); // shared ones stay
   });
 });
+
+describe("production bug fixes", () => {
+  it("an expense in a since-archived category can still be edited", async () => {
+    const u = await makeUser("archived-edit@example.com");
+    const cat = await createCategory(u, { name: "Old hobby", kind: "expense", defaultTaxSection: "none" });
+    const e = await createExpense(u, { amountPaise: 500_00, categoryId: cat.id, date: istMidnight(2026, 9, 3), paymentMethod: "cash", upiApp: null, taxSection: "none", tags: [] });
+    await updateCategory(u, cat.id, { isArchived: true });
+    // The edit form re-sends the (archived) category with the other fields.
+    const edited = await updateExpense(u, e.id, { categoryId: cat.id, amountPaise: 600_00 });
+    expect(edited.amountPaise).toBe(600_00);
+    // Moving a *different* expense into an archived category is still refused.
+    const other = await createExpense(u, { amountPaise: 1_00, categoryId: systemCat, date: istMidnight(2026, 9, 4), paymentMethod: "cash", upiApp: null, taxSection: "none", tags: [] });
+    await expect(updateExpense(u, other.id, { categoryId: cat.id })).rejects.toMatchObject({ code: "VALIDATION" });
+  });
+
+  it("renaming a category updates the cached monthly summaries", async () => {
+    const u = await makeUser("rename@example.com");
+    const cat = await createCategory(u, { name: "Chai", kind: "expense", defaultTaxSection: "none" });
+    await createExpense(u, { amountPaise: 20_00, categoryId: cat.id, date: istMidnight(2026, 8, 10), paymentMethod: "upi", upiApp: null, taxSection: "none", tags: [] });
+    await updateCategory(u, cat.id, { name: "Chai & snacks" });
+    const { MonthlySummary } = await import("@/models/monthly-summary");
+    const s = await MonthlySummary.findOne({ userId: u, year: 2026, month: 8 }).lean();
+    expect(s!.byCategory.find((c) => c.categoryId.toHexString() === cat.id)!.name).toBe("Chai & snacks");
+  });
+
+  it("income date filter `to` is inclusive, like expenses", async () => {
+    const u = await makeUser("income-to@example.com");
+    await createIncome(u, { amountPaise: 1_000_00, source: "salary", date: istMidnight(2026, 11, 30) });
+    const { listIncome } = await import("@/lib/services/income");
+    const r = await listIncome(u, { from: istMidnight(2026, 11, 1), to: istMidnight(2026, 11, 30), page: 1, pageSize: 25 });
+    expect(r.total).toBe(1);
+  });
+
+  it("budgets and recurring rules keep working after their category is archived", async () => {
+    const u = await makeUser("archived-rule@example.com");
+    const cat = await createCategory(u, { name: "Gym", kind: "expense", defaultTaxSection: "none" });
+    await createRecurringRule(u, { kind: "expense", title: "Gym", amountPaise: 1_500_00, categoryId: cat.id, incomeSource: null, paymentMethod: "upi", upiApp: null, taxSection: "none", frequency: "monthly", dayOfMonth: 5, startsAt: istMidnight(2027, 1, 1), endsAt: null, remindDaysBefore: 2, isActive: true });
+    await upsertBudget(u, { categoryId: cat.id, amountPaise: 2_000_00, year: null, month: null });
+    await updateCategory(u, cat.id, { isArchived: true });
+    await expect(upsertBudget(u, { categoryId: cat.id, amountPaise: 2_500_00, year: null, month: null })).resolves.toMatchObject({ amountPaise: 2_500_00 });
+    expect(await generateRecurringEntries(u, istMidnight(2027, 1, 20))).toBe(1);
+  });
+});
+
+describe("receipt storage hygiene", () => {
+  it("prunes old receipts nothing references, keeps used and fresh ones", async () => {
+    const { pruneOrphanReceipts, receiptBytesUsed } = await import("@/lib/storage");
+    const u = await makeUser("receipts-gc@example.com");
+    const jpeg = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0x01]), contentType: "image/jpeg" };
+    const used = await putReceipt(u, jpeg);
+    const orphan = await putReceipt(u, jpeg);
+    const deletedButUndoable = await putReceipt(u, jpeg);
+    await createExpense(u, { amountPaise: 1_00, categoryId: systemCat, date: istMidnight(2026, 11, 5), paymentMethod: "cash", upiApp: null, taxSection: "none", tags: [], receiptUrl: used.url });
+    const gone = await createExpense(u, { amountPaise: 2_00, categoryId: systemCat, date: istMidnight(2026, 11, 5), paymentMethod: "cash", upiApp: null, taxSection: "none", tags: [], receiptUrl: deletedButUndoable.url });
+    await deleteExpense(u, gone.id);
+    expect(await receiptBytesUsed(u)).toBe(12);
+
+    const later = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    expect(await pruneOrphanReceipts(new Date())).toBe(0); // grace period
+    await pruneOrphanReceipts(later);
+    expect(await Receipt.exists({ _id: used.key })).not.toBeNull();
+    expect(await Receipt.exists({ _id: deletedButUndoable.key })).not.toBeNull();
+    expect(await Receipt.exists({ _id: orphan.key })).toBeNull();
+  });
+});

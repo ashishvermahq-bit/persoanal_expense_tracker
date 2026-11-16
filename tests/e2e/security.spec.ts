@@ -127,3 +127,27 @@ test("account export, then deletion ends the session", async ({ playwright, base
   expect(relogin.status()).toBe(401);
   await a.ctx.dispose();
 });
+
+test("a revoked session lands on sign-in with a notice (no redirect loop)", async ({ page, playwright, baseURL }) => {
+  const email = uniqueEmail();
+  const signup = await page.request.post("/api/auth/signup", { headers: { origin: baseURL! }, data: { name: "Revoked Tab", email, password, confirmPassword: password } });
+  expect(signup.status()).toBe(201);
+  await page.goto("/dashboard");
+  await expect(page.getByTestId("greeting")).toBeVisible();
+
+  // Password changed on another device.
+  const other = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { origin: baseURL! } });
+  expect((await other.post("/api/auth/login", { data: { email, password } })).status()).toBe(200);
+  expect((await other.post("/api/account/password", { data: { currentPassword: password, newPassword: "Rotated789", confirmPassword: "Rotated789" } })).status()).toBe(200);
+
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/login\?reauth=1/);
+  await expect(page.getByRole("status").filter({ hasText: "Your session ended" })).toBeVisible();
+  // The stale cookie was dropped, so the old password page stays put and the new one works.
+  const form = page.getByTestId("login-form");
+  await form.getByLabel("Email").fill(email);
+  await form.getByLabel("Password", { exact: true }).fill("Rotated789");
+  await form.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await other.dispose();
+});
