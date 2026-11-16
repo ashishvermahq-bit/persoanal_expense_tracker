@@ -74,10 +74,12 @@ export async function resetRateLimit(key: string, rule: RateLimitRule, now: Date
 
 /**
  * Client IP for rate limiting. Must not be client-controlled:
- * - `x-real-ip`: set by Vercel (and nginx-style proxies) to the connecting client.
+ * - `x-real-ip`: nginx sets it to the connecting client (deploy/nginx/paisa.conf
+ *   overwrites any value the client sent).
  * - else the LAST `x-forwarded-for` hop, the one our own proxy appended. The first
  *   entry is whatever the client sent, so trusting it lets anyone dodge the limit.
- * (Vercel overwrites x-forwarded-for with the real client IP, so both agree there.)
+ * This only holds while the app port is reachable from nginx alone (compose binds
+ * it to 127.0.0.1).
  */
 export function clientIp(headers: Headers): string {
   const real = headers.get("x-real-ip")?.trim();

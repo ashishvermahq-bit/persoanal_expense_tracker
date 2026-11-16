@@ -24,7 +24,7 @@ export function isCrossSiteWrite(request: { method: string; headers: Headers; ne
   } catch {
     return true;
   }
-  // Behind Vercel/other proxies the public host can arrive as x-forwarded-host.
+  // Behind nginx the public host (with any non-default port) arrives as x-forwarded-host.
   const allowed = [request.nextUrl.host, request.headers.get("host"), request.headers.get("x-forwarded-host")];
   return !allowed.some((h) => h && h.split(",")[0]!.trim() === host);
 }

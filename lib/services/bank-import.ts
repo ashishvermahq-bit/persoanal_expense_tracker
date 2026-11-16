@@ -8,7 +8,7 @@ import type { PaymentMethod, TaxSection } from "@/types/models";
 import { assertUsableCategory } from "./categories";
 import { createExpense } from "./expenses";
 
-/** Upload guards: Vercel caps request bodies at 4.5 MB anyway; statements are far smaller. */
+/** Upload guards: statements are far smaller than this (nginx also caps bodies at 6 MB). */
 export const IMPORT_MAX_BYTES = 1024 * 1024;
 export const IMPORT_MAX_ROWS = 2000;
 

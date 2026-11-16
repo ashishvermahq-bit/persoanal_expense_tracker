@@ -12,7 +12,7 @@ export interface StoredFile {
   key: string;
 }
 
-/** Vercel functions reject request bodies over 4.5 MB, so stay safely below. */
+/** Receipts are stored in MongoDB; nginx (deploy/nginx/paisa.conf) allows 6 MB bodies, comfortably above this. */
 export const RECEIPT_MAX_BYTES = 4 * 1024 * 1024;
 export const RECEIPT_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -35,7 +35,7 @@ export function sniffReceiptType(bytes: Uint8Array): string | null {
   return null;
 }
 
-/** Per-user cap on stored receipt bytes (Atlas storage is shared; M0 is 512 MB in total). */
+/** Per-user cap on stored receipt bytes (one database disk is shared by every user). */
 export const RECEIPT_QUOTA_BYTES = 50 * 1024 * 1024;
 
 export async function receiptBytesUsed(userId: Types.ObjectId): Promise<number> {

@@ -26,7 +26,7 @@ export const POST = withApi(async (request) => {
   if (byEmail.allowed) {
     // After the response: the token write and the Resend call happen only for real
     // accounts, so doing them inline would make "registered" measurably slower.
-    // On Vercel, after() keeps the function alive (waitUntil) until this finishes.
+    // The server waits for after() work on shutdown (SIGTERM; compose allows 30 s).
     after(async () => {
       try {
         const base = appUrl(request); // throws if APP_URL is missing in production: logged, same answer
