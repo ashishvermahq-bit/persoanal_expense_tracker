@@ -13,7 +13,8 @@ const iconLink =
 
 export async function AppHeader() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // ?reauth=1: a revoked-but-validly-signed cookie would otherwise bounce /login → /dashboard forever.
+  if (!user) redirect("/login?reauth=1");
 
   return (
     // pt-safe: with the black-translucent iOS status bar, content would otherwise sit under the notch.
