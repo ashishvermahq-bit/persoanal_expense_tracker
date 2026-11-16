@@ -31,8 +31,9 @@ export default function PrivacyPage() {
 
       <h2>Who can see it</h2>
       <p>
-        Only you, when signed in. Your data is stored with our hosting and database providers, who process it on our behalf to run the service. It is never
-        shared with anyone else unless the law requires it.
+        Only you, when signed in. Your data is stored with our hosting and database providers, who process it on our behalf to run the service. If you ask
+        to reset your password, your email address is passed to our email delivery provider to send the link. It is never shared with anyone else unless
+        the law requires it.
       </p>
 
       <h2>Your rights</h2>
