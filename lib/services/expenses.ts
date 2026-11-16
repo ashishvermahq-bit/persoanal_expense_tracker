@@ -86,8 +86,9 @@ export async function getExpense(userId: Types.ObjectId, id: string): Promise<Ex
   return toExpenseDTO(doc, cat);
 }
 
-export async function createExpense(userId: Types.ObjectId, input: CreateExpenseInput): Promise<ExpenseDTO> {
-  const categoryId = await assertUsableCategory(userId, input.categoryId);
+/** `allowArchivedCategory`: for recurring rules created before their category was archived. */
+export async function createExpense(userId: Types.ObjectId, input: CreateExpenseInput, opts: { allowArchivedCategory?: boolean } = {}): Promise<ExpenseDTO> {
+  const categoryId = await assertUsableCategory(userId, input.categoryId, { allowArchived: opts.allowArchivedCategory });
   const doc = await Expense.create(compact({ ...input, categoryId, userId, currency: "INR" }));
   await recomputeForDates(userId, [doc.date]);
   const cat = await Category.findById(categoryId, { name: 1, icon: 1, color: 1 }).lean();
@@ -97,11 +98,17 @@ export async function createExpense(userId: Types.ObjectId, input: CreateExpense
 export async function updateExpense(userId: Types.ObjectId, id: string, input: UpdateExpenseInput): Promise<ExpenseDTO> {
   if (!Types.ObjectId.isValid(id)) throw new ApiError("NOT_FOUND", "Expense not found");
   const _id = new Types.ObjectId(id);
-  const before = await Expense.findOne({ _id, userId, deletedAt: null }, { date: 1 }).lean();
+  const before = await Expense.findOne({ _id, userId, deletedAt: null }, { date: 1, categoryId: 1 }).lean();
   if (!before) throw new ApiError("NOT_FOUND", "Expense not found");
 
   const $set: Record<string, unknown> = { ...input };
-  if (input.categoryId) $set.categoryId = await assertUsableCategory(userId, input.categoryId);
+  // Only a *changed* category must be usable: an expense whose category was archived
+  // later keeps it (the edit form re-sends it), otherwise it could never be edited.
+  if (input.categoryId && input.categoryId !== before.categoryId.toHexString()) {
+    $set.categoryId = await assertUsableCategory(userId, input.categoryId);
+  } else {
+    delete $set.categoryId;
+  }
 
   const doc = await Expense.findOneAndUpdate(
     { _id, userId, deletedAt: null },

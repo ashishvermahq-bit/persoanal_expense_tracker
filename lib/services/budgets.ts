@@ -195,7 +195,7 @@ export async function upsertBudget(
   const userObjectId = typeof userId === "string" ? new Types.ObjectId(userId) : userId;
   // Only a category this user may use (system or their own): a budget on someone
   // else's category id would echo its name/colour/icon back in listBudgetsWithSpend.
-  const categoryObjectId = await assertUsableCategory(userObjectId, data.categoryId);
+  const categoryObjectId = await assertUsableCategory(userObjectId, data.categoryId, { allowArchived: true });
 
   const payload = compact({
     userId: userObjectId,

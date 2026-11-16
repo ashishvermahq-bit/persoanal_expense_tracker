@@ -10,7 +10,8 @@ import { toIncomeDTO } from "./serialize";
 
 export async function listIncome(userId: Types.ObjectId, f: IncomeFilters): Promise<Paged<IncomeDTO>> {
   const filter: Record<string, unknown> = { userId, deletedAt: null };
-  if (f.from || f.to) filter.date = { ...(f.from ? { $gte: f.from } : {}), ...(f.to ? { $lt: f.to } : {}) };
+  // `to` is inclusive (the last day picked), same as expenses: compare against the next IST midnight.
+  if (f.from || f.to) filter.date = { ...(f.from ? { $gte: f.from } : {}), ...(f.to ? { $lt: new Date(f.to.getTime() + 86_400_000) } : {}) };
   if (f.source) filter.source = f.source;
   const skip = (f.page - 1) * f.pageSize;
 

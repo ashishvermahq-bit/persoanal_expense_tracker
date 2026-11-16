@@ -109,7 +109,7 @@ async function createEntry(userId: Types.ObjectId, rule: IRecurringRule, date: D
       tags: [],
       recurringRuleId: rule._id,
     };
-    await createExpense(userId, input);
+    await createExpense(userId, input, { allowArchivedCategory: true });
   } else {
     const input: CreateIncomeInput & { recurringRuleId: Types.ObjectId } = {
       amountPaise: rule.amountPaise,
