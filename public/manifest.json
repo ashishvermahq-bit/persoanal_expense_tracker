@@ -1,0 +1,22 @@
+{
+  "name": "Paisa - Personal Expense Tracker",
+  "short_name": "Paisa",
+  "description": "India-first personal expense tracker: UPI, cards and cash, budgets, FY reports and 80C/80D tags.",
+  "id": "/",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    { "name": "Add expense", "url": "/add", "description": "Quick add in 3 taps", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Expenses", "url": "/expenses", "description": "Search and filter your expenses" }
+  ]
+}

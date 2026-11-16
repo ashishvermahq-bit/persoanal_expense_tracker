@@ -2,28 +2,87 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project state
-
-This is a personal expense tracker that is currently an untouched `create-next-app` scaffold: [app/page.tsx](app/page.tsx) and the metadata in [app/layout.tsx](app/layout.tsx) are still the template defaults. There is no data layer, API routes, or test setup yet — new features establish those conventions rather than follow existing ones.
-
 ## Commands
 
-No lockfile is committed; the README uses npm.
+```bash
+npm run dev       # Start development server (Turbopack, http://localhost:3000); needs MONGODB_URI + AUTH_SECRET in .env.local
+npm run dev:local # Same, plus a local MongoDB on :27017 persisted in .data/ (no Mongo install needed)
+npm run build     # Production build
+npm run start     # Start production server
+npm run lint      # Run ESLint (not next lint — that was removed in Next.js 16)
+npm run typecheck # tsc --noEmit (run `npx next typegen` first if LayoutProps/PageProps are missing)
+npm test          # Vitest unit tests in tests/unit (model tests spin up mongodb-memory-server)
+npm run test:e2e  # Playwright e2e in tests/e2e against `next dev` (on-demand compiles can make it flaky on slow machines)
+npm run test:e2e:prod # same suite against `next build` + `next start`: stable timings, use this before committing
+# Env vars: see .env.example / README (MONGODB_URI, AUTH_SECRET ≥32, APP_URL, CRON_SECRET); validated at boot in instrumentation.ts
+```
 
-- `npm run dev` — dev server at http://localhost:3000
-- `npm run build` — production build (also the type check; there is no separate `typecheck` script — use `npx tsc --noEmit` for types only)
-- `npm run start` — serve the production build
-- `npm run lint` — ESLint (flat config, `eslint-config-next` core-web-vitals + typescript); lint one file with `npx eslint app/page.tsx`
+## Domain conventions (do not break these)
 
-There is no test runner configured.
+- **Money is integer paise.** Every `amountPaise` field and every API payload is an integer (₹450.50 → `45050`). Use `toPaise` / `formatPaise` in `lib/money.ts`; never store or compute with rupee floats. Display uses `Intl.NumberFormat('en-IN')` → `₹1,23,456.78`.
+- **Dates are IST.** All "today / this month / this FY" logic goes through `lib/dates.ts` (`todayIST`, `monthRange`, `fyRange`, …). Display is DD/MM/YYYY. Indian FY = 1 Apr – 31 Mar, labelled by start year (`fyLabel(2025)` → "FY 2025-26"); users can switch to calendar year via `preferences.fyStart`.
+- **Enums live in `types/models.ts`** (`PAYMENT_METHODS`, `TAX_SECTIONS`, …) and are imported by Mongoose schemas, Zod validators and UI alike. Add new values there only.
+- **Every query is scoped by `userId`** and soft-deleted rows (`deletedAt !== null`) are excluded. System categories have `userId: null, isSystem: true` and are seeded by `lib/seed/categories.ts`.
+- `MonthlySummary` is a cache; recompute it after any expense/income write for the affected month rather than editing it directly.
 
-## Stack and non-default configuration
+## UI theme conventions (see docs/design-system.md)
 
-- Next.js 16.4 (App Router, Turbopack), React 19.3, TypeScript strict, Tailwind CSS 4.3.
-- These versions are recent — verify Next.js APIs against the installed package (`node_modules/next`) or current docs rather than assuming older behaviour.
-- [next.config.ts](next.config.ts) enables options that change how pages must be written:
-  - `cacheComponents: true` — routes are prerendered by default; uncached data access or request-time APIs (`cookies()`, `headers()`, `searchParams`, etc.) must be inside a `<Suspense>` boundary or be explicitly cached with the `"use cache"` directive, otherwise the build errors.
-  - `partialPrefetching: true` and `experimental.agentFeedback: true` are also on.
-- Tailwind is wired through a Turbopack loader rule (`@tailwindcss/turbopack` on `*.css`) in `next.config.ts`, not through PostCSS — there is no `postcss.config.*` or `tailwind.config.*`. Theme tokens are defined in CSS via `@theme inline` in [app/globals.css](app/globals.css) (`background`, `foreground`, Geist font variables), with dark mode driven by `prefers-color-scheme`.
-- Path alias `@/*` maps to the repository root (not `src/`).
-- Layout props use the globally generated `LayoutProps<"/">` / `PageProps<...>` route types (produced by `next dev` / `next build` / `npx next typegen`), so no import is needed for them.
+- **No hex in components.** Use semantic tokens from `app/globals.css` (`bg-surface`, `text-ink`/`ink-2`/`ink-3`, `border-line`, `bg-primary-solid text-on-primary`, `text-success-ink`, `bg-danger/10`, `var(--series-1)` in charts). Fills use the hue token (`bg-warning`); text uses the `*-ink` token (`text-warning-ink`) — the raw hues fail AA as text.
+- **Theme** = `<html data-theme>` set pre-paint by `THEME_BOOT_SCRIPT` (`lib/theme.ts`). `dark:` is a custom variant keyed on it; change themes only via `setTheme()`.
+- **Status is never colour-only**: icon + text label (+ `aria-*`). Charts get a `ChartTable` twin.
+- **Touch targets**: interactive elements get `pointer-coarse:min-h-11` (44px). Fields use `fieldClassName()` (16px text on phones to stop iOS zoom).
+- **Motion**: use the `animate-*` tokens; lists stagger with `animate-list-in` + `style={{ "--i": index }}`; add `data-ripple` for tap ripple. Everything must still work under `prefers-reduced-motion`.
+- `cn()` only joins strings (no tailwind-merge) — don't pass conflicting utilities and expect the later one to win.
+- **Previously visited routes stay mounted, hidden, in `<Activity>`** (cacheComponents). Local state can outlive a navigation (derive from the URL, see `filter-bar.tsx`), and e2e locators after a client-side navigation should use `.filter({ visible: true })`.
+- **"Add expense" entry points use `QuickAddLink`** (opens the global quick-add sheet, falls back to `/add`). After auth/session changes use a full navigation, never `router.replace` + `router.refresh` (the refresh can abort the navigation).
+- Expense list `to` filter is **inclusive** (last day picked). Deletes from lists are undoable via `POST /api/expenses/[id]/restore`.
+- `public/sw.js` caches **static assets only**; never cache HTML/RSC/API (signed-in money data on shared phones).
+
+## Auth & API conventions
+
+- Session = HS256 JWT (`jose`) in an HTTP-only `session` cookie, 7-day TTL. `lib/auth/session.ts` is edge-safe and used by `proxy.ts`; `lib/auth/cookies.ts` wraps `next/headers` for server code. `getCurrentUser()` (`lib/auth/current-user.ts`) is the Server Component helper.
+- `proxy.ts` is an *optimistic* gate (signature/expiry only) and the CSRF guard (cross-site POST/PATCH/PUT/DELETE to `/api/*` → 403, `lib/auth/origin.ts`). Every `/api/*` route handler must still use `withAuth` from `lib/api.ts`, which verifies the cookie **and that the session isn't revoked** (`verifiedSession()`: the JWT's `sv` must equal `user.sessionVersion`; bumped on password change/reset), connects to Mongo and hands you `{ userId }`. Pages use `requireUserId()`, which does the same.
+- New public routes must be added to `PUBLIC_API` / `OPEN_PAGES` in `proxy.ts`. Static files are excluded by the matcher; never let it redirect `/manifest.json`, icons or `sw.js`.
+- Route `[id]` params: `idParam(id)` (malformed → 404, never a 500). Any category id from a client goes through `assertUsableCategory()` (system or the user's own).
+- Receipts live in MongoDB (`models/receipt.ts`) and are served only to their owner via `/api/receipts/<id>.<ext>`; `receiptUrl` must match `RECEIPT_URL_PATTERN`.
+- CSV output goes through `csvRow()` (`lib/csv.ts`: quoting + formula-injection guard); HTML exports through `escapeHtml()`. Log errors with `redactForLog()` (no emails/tokens).
+- Security headers/CSP live in `next.config.ts`. `script-src` keeps `'unsafe-inline'` because PPR shells can't carry nonces; don't add `dangerouslySetInnerHTML` with user data.
+- API envelope: `{ data }` or `{ error: { code, message, fields? } }`. Throw `ApiError` inside handlers; validate bodies with `parseBody(request, zodSchema)`. Client components call routes through `api()` in `lib/client.ts`, which throws `ApiClientError` with `.fields` for inline form errors.
+- Zod v4: put `.trim().toLowerCase()` *before* format checks via `.pipe(z.email())`; map issues to fields with `fieldErrors()` (first issue per field wins).
+- **Services, not inline queries.** Business logic lives in `lib/services/*` (`expenses`, `income`, `categories`, `preferences`) and returns plain DTOs from `types/dto.ts`. Route handlers under `app/api/*` and Server Components both call the same service functions; pages get the user via `requireUserId()` (`lib/services/context.ts`). Any expense/income write must go through the service so `recomputeForDates()` keeps `MonthlySummary` fresh.
+- Zod schemas in `lib/validation/*` are shared by client forms and API routes; they accept either integer `amountPaise` or a human-typed rupee `amount` string and normalise to paise.
+- Pages that read cookies / DB must render that part inside `<Suspense>` (cacheComponents). Interactive e2e tests live in `tests/e2e` and boot their own in-memory Mongo via `tests/e2e/server.mjs`; they are slow on first run because `next dev` compiles routes on demand.
+
+## This is Next.js 16 — read the bundled docs before writing code
+
+APIs, conventions, and defaults differ significantly from Next.js 13–15. Before writing or modifying any Next.js code, read the relevant guide in `node_modules/next/dist/docs/`. Key breaking changes from Next.js 15→16:
+
+**Async Request APIs (required)** — `params`, `searchParams`, `cookies()`, `headers()`, and `draftMode()` are all async. Always `await` them:
+```tsx
+export default async function Page(props: PageProps<'/[slug]'>) {
+  const { slug } = await props.params
+}
+```
+Run `npx next typegen` to generate globally available `PageProps<>`, `LayoutProps<>`, and `RouteContext<>` helpers (already used in `app/layout.tsx`).
+
+**Turbopack is the default** — `next dev` and `next build` both use Turbopack. No `--turbopack` flag needed. Use `--webpack` to opt out. Sass tilde imports (`~bootstrap/...`) are not supported; remove the `~` prefix.
+
+**`cacheComponents: true`** — This project has PPR (Partial Prerendering / Cache Components) enabled. Data fetches outside `<Suspense>` will cause build errors. Wrap dynamic data in Suspense.
+
+**`next lint` is removed** — Use `npm run lint` (runs `eslint` directly). `next build` no longer lints.
+
+**`middleware.ts` → `proxy.ts`** — The middleware file convention is renamed. The `edge` runtime is not supported in proxy; use `nodejs` runtime or keep using `middleware.ts` for edge.
+
+**Parallel routes require `default.js`** — Every `@slot` directory needs an explicit `default.tsx` or the build fails.
+
+**`revalidateTag` requires a second argument** — `revalidateTag('key', 'max')` not `revalidateTag('key')`. Use `updateTag` for immediate read-your-writes semantics in Server Actions.
+
+**`serverRuntimeConfig` / `publicRuntimeConfig` removed** — Use environment variables: `process.env.SECRET` for server, `NEXT_PUBLIC_VAR` for client.
+
+## Architecture
+
+- **App Router** (`app/`) — all routes use the App Router. No Pages Router.
+- **Server Components by default** — layouts and pages are Server Components unless marked `'use client'`.
+- **Tailwind CSS 4** — configured via `@tailwindcss/turbopack` loader in `next.config.ts`, not via `tailwind.config.js`.
+- **Path alias** — `@/*` maps to the repo root (e.g. `@/app/...`, `@/components/...`).
+- **TypeScript strict mode** — `strict: true` in `tsconfig.json`.

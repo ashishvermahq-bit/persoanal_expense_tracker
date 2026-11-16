@@ -1,0 +1,15 @@
+.git
+node_modules
+.next
+.next-*
+.data
+deploy
+coverage
+test-results
+playwright-report
+blob-report
+*.tsbuildinfo
+next-env.d.ts
+# never send secrets into the build context
+**/.env*
+!.env.example
