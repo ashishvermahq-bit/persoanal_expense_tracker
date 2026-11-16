@@ -11,6 +11,7 @@ import { ApiClientError, api } from "@/lib/client";
 import { loginSchema } from "@/lib/validation/auth";
 import { fieldErrors } from "@/lib/validation/fields";
 import { markWelcome } from "@/components/dashboard/welcome-count-up";
+import { safeNext } from "@/lib/safe-next";
 import { FormError } from "./form-error";
 import { authLinkClassName } from "./link-style";
 import { useDesktopAutofocus } from "./use-desktop-autofocus";
@@ -87,10 +88,4 @@ export function LoginForm() {
       </Button>
     </Form>
   );
-}
-
-/** Only allow same-origin relative redirects. */
-function safeNext(next: string | undefined): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/dashboard";
-  return next;
 }
