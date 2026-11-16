@@ -48,6 +48,8 @@ const nextConfig: NextConfig = {
   // Lets the e2e runner boot its own `next dev` beside a developer's running one
   // (Next locks one dev server per distDir). See tests/e2e/server.mjs.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  // The Docker image (Dockerfile) builds a self-contained server.js; `next start` and dev don't.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,
   experimental: {
     agentFeedback: true,
@@ -64,8 +66,9 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      { source: "/:path*", headers: securityHeaders },
-      // HSTS only when the request arrived over HTTPS (Vercel sets x-forwarded-proto),
+      // X-Accel-Buffering: nginx would otherwise buffer streamed (Suspense/PPR) responses.
+      { source: "/:path*", headers: [...securityHeaders, { key: "X-Accel-Buffering", value: "no" }] },
+      // HSTS only when the request arrived over HTTPS (nginx sets x-forwarded-proto),
       // never on http://localhost, where it would stick to every local dev server.
       {
         source: "/:path*",

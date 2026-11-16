@@ -55,3 +55,6 @@ next-env.d.ts
 
 # local MongoDB data for `npm run dev:local`
 /.data/
+
+# database dumps written by deploy/backup.sh
+/deploy/backups/
