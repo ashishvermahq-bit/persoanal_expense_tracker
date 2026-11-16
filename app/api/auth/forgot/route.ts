@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { ApiError, ok, parseBody, withApi } from "@/lib/api";
 import { AUTH_RATE_LIMIT, clientIp, hitRateLimit } from "@/lib/auth/rate-limit";
 import { connectDB } from "@/lib/db";
@@ -23,12 +24,18 @@ export const POST = withApi(async (request) => {
 
   // Per-email limit reached: answer as usual but send nothing more (no inbox flooding).
   if (byEmail.allowed) {
-    try {
-      const reset = await createPasswordResetToken(email);
-      if (reset) await sendPasswordResetEmail(email, `${appUrl(request)}/reset-password?token=${reset.token}`);
-    } catch (err) {
-      console.error("[forgot] could not issue reset", redactForLog(err));
-    }
+    // After the response: the token write and the Resend call happen only for real
+    // accounts, so doing them inline would make "registered" measurably slower.
+    // On Vercel, after() keeps the function alive (waitUntil) until this finishes.
+    after(async () => {
+      try {
+        const base = appUrl(request); // throws if APP_URL is missing in production: logged, same answer
+        const reset = await createPasswordResetToken(email);
+        if (reset) await sendPasswordResetEmail(email, `${base}/reset-password?token=${reset.token}`);
+      } catch (err) {
+        console.error("[forgot] could not issue reset", redactForLog(err));
+      }
+    });
   }
   return ok({ sent: true });
 });
