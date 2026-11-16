@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { connection } from "next/server";
 import { connectDB } from "@/lib/db";
 
 /**
@@ -6,6 +7,7 @@ import { connectDB } from "@/lib/db";
  * Deliberately says nothing else (no versions, hosts or error text).
  */
 export async function GET() {
+  await connection(); // checked per request, never prerendered at build time
   try {
     await connectDB();
     await mongoose.connection.db!.admin().ping();
